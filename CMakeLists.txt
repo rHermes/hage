@@ -7,13 +7,24 @@ project(
         DESCRIPTION "A collection of utilities I have created"
         LANGUAGES CXX)
 
+include(CheckCXXCompilerFlag)
+
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_EXTENSIONS OFF)
 
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+    CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+    if(COMPILER_SUPPORTS_MARCH_NATIVE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    endif()
+
+
     include(CTest)
 endif()
 
+include(FetchContent)
+
 add_subdirectory(src)
+
