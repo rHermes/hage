@@ -301,9 +301,18 @@ public:
       if (!read_from_buffer<Buffer, decltype(fmt.get())>(buffer, st))
         return false;
 
-      auto results = std::tuple{ read_from_buffer<Buffer, Args>(buffer)... };
-      auto logLine =  std::apply([&st](auto&&... ts) {
-        return std::vformat(st, std::make_format_args(ts...)); }, results);
+      // not using an optional because your interface effectively requires default constructibility anyway
+      std::tuple<typename Serializer<Buffer, Args>::serialized_type...> results;
+      bool success = [&results, &buffer]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return (... and read_from_buffer<Buffer, Args>(buffer, std::get<Is>(results)));
+      }(std::index_sequence_for<Args...>{});
+      if (!success)
+        return false;
+
+      // Simpler version, if we cannot have errors;
+      // auto results = std::tuple{ read_from_buffer<Buffer, Args>(buffer)... };
+      auto logLine =
+        std::apply([&st](auto&&... ts) { return std::vformat(st, std::make_format_args(ts...)); }, results);
 
       std::cout << logLine << '\n';
 
