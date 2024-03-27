@@ -3,11 +3,11 @@
 
 namespace hage {
 #ifdef __cpp_lib_hardware_interference_size
-    static constexpr auto constructive_interference_size =  std::hardware_constructive_interference_size;
-    static constexpr auto destructive_interference_size = std::hardware_destructive_interference_size;
+static constexpr auto constructive_interference_size = std::hardware_constructive_interference_size;
+static constexpr auto destructive_interference_size = std::hardware_destructive_interference_size;
 #else
-    // 64 bytes on x86-64 │ L1_CACHE_BYTES │ L1_CACHE_SHIFT │ __cacheline_aligned │ ...
-    static constexpr std::size_t constructive_interference_size =  64;
-    static constexpr std::size_t destructive_interference_size = 64;
+// 64 bytes on x86-64 │ L1_CACHE_BYTES │ L1_CACHE_SHIFT │ __cacheline_aligned │ ...
+static constexpr std::size_t constructive_interference_size = 64;
+static constexpr std::size_t destructive_interference_size = 64;
 #endif
 };

@@ -6,6 +6,8 @@
 #include <atomic>
 #include <cstring>
 #include <deque>
+#include <format>
+#include <iostream>
 #include <mutex>
 #include <span>
 #include <stdexcept>
@@ -213,16 +215,23 @@ template<typename BufferType, typename T, typename = void>
 struct Serializer;
 
 template<typename BufferType, typename T>
-struct Serializer<BufferType, T, std::enable_if_t<std::is_scalar_v<T>>>
+struct Serializer<BufferType, T, std::enable_if_t<std::is_scalar_v<std::remove_cvref_t<T>>>>
 {
+  using serialized_type = std::remove_cvref_t<T>;
+
   bool to_bytes(BufferType& buffer, const T& val) { return buffer.write(detail::singular_bytes(val)); };
 
-  bool from_bytes(BufferType& buffer, T& val) { return buffer.read(detail::singular_writable_bytes(val)); }
+  bool from_bytes(BufferType& buffer, serialized_type& val)
+  {
+    return buffer.read(detail::singular_writable_bytes(val));
+  }
 };
 
 template<typename BufferType, typename T>
 struct Serializer<BufferType, T, std::enable_if_t<std::is_convertible_v<T, std::string_view>>>
 {
+  using serialized_type = std::string;
+
   bool to_bytes(BufferType& buffer, const std::string_view val)
   {
     bool good = write_to_buffer(buffer, val.size());
@@ -230,10 +239,10 @@ struct Serializer<BufferType, T, std::enable_if_t<std::is_convertible_v<T, std::
     return good;
   };
 
-  bool from_bytes(BufferType& buffer, std::string& val)
+  bool from_bytes(BufferType& buffer, serialized_type& val)
   {
     std::string_view::size_type sz;
-    if (!read_from_buffer(buffer, sz))
+    if (!read_from_buffer<BufferType, decltype(sz)>(buffer, sz))
       return false;
 
     val.resize(sz);
@@ -241,7 +250,7 @@ struct Serializer<BufferType, T, std::enable_if_t<std::is_convertible_v<T, std::
   }
 };
 
-template<typename T, typename BufferType>
+template<typename BufferType, typename T>
 bool
 write_to_buffer(BufferType& buff, const T& src)
 {
@@ -249,20 +258,21 @@ write_to_buffer(BufferType& buff, const T& src)
   return ser.to_bytes(buff, src);
 }
 
-template<typename T, typename BufferType>
+template<typename BufferType, typename T>
 bool
-read_from_buffer(BufferType& buff, T& src)
+read_from_buffer(BufferType& buff, typename Serializer<BufferType, T>::serialized_type& src)
 {
   Serializer<BufferType, T> ser;
   return ser.from_bytes(buff, src);
 }
 
-template<typename T, typename BufferType>
-T
+template<typename BufferType, typename T>
+typename Serializer<BufferType, T>::serialized_type
 read_from_buffer(BufferType& buff)
 {
-  T lel{};
+
   Serializer<BufferType, T> ser;
+  typename decltype(ser)::serialized_type lel{};
   ser.from_bytes(buff, lel);
   return lel;
 }
@@ -283,13 +293,28 @@ public:
   {
   }
 
-  template<typename... Ts>
-  bool try_log(loggingFunction f, Ts&&... ts)
+  template<typename... Args>
+  bool try_log(std::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
   {
+    auto trampoline = +[](Buffer& buffer) {
+      std::string st;
+      if (!read_from_buffer<Buffer, decltype(fmt.get())>(buffer, st))
+        return false;
+
+      auto results = std::tuple{ read_from_buffer<Buffer, Args>(buffer)... };
+      auto logLine =  std::apply([&st](auto&&... ts) {
+        return std::vformat(st, std::make_format_args(ts...)); }, results);
+
+      std::cout << logLine << '\n';
+
+      return true;
+    };
+
     buffer_.start_write();
 
-    bool good = write_to_buffer(buffer_, f);
-    good = good && ((write_to_buffer(buffer_, ts)) && ...);
+    bool good = write_to_buffer(buffer_, trampoline);
+    good = good && write_to_buffer(buffer_, fmt.get());
+    good = good && ((write_to_buffer(buffer_, args)) && ...);
 
     if (good)
       buffer_.finish_write();
@@ -302,8 +327,9 @@ public:
   bool try_read_log()
   {
     buffer_.start_read();
-    loggingFunction f;
-    auto good = read_from_buffer(buffer_, f) && f(buffer_);
+    loggingFunction f{ nullptr };
+    auto good = read_from_buffer<Buffer, loggingFunction>(buffer_, f);
+    good = good && f(buffer_);
     if (!good)
       buffer_.cancel_read();
     else
@@ -312,15 +338,15 @@ public:
     return good;
   }
 
-  template<typename... Ts>
-  void log(loggingFunction f, Ts&&... ts)
+  template<typename... Args>
+  void log(std::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
   {
     // TODO(rHermes): Implement a max number of messages, that we can deduct based
     // on the capacity of the buffer and make sure the amount is not that. For now
     // we do a dummy of 100
-    available_.wait(10, std::memory_order_acquire);
+    available_.wait(10, std::memory_order::acquire);
 
-    bool good = try_log(f, ts...);
+    bool good = try_log(std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
     if (!good)
       throw std::runtime_error("We were unable to write to the log, this should never happen");
 
@@ -342,27 +368,4 @@ public:
     available_.notify_one();
   }
 };
-
-/*
-
-Some examples of what loggers can look like.
-
-template <typename ... Ts, typename Buffer>
-bool nullLogger(Buffer& buffer) {
-        ((read_from_buffer<Ts>(buffer)), ...);
-        return true;
-}
-
-
-template <typename Buffer>
-bool fooLogger(Buffer& buffer) {
-        std::cout << "We called fooLogger with a="
-                << read_from_buffer<std::int64_t>(buffer)
-                << " and b="
-                << read_from_buffer<std::string>(buffer)
-                << '\n';
-
-        return true;
-}
-*/
 };
