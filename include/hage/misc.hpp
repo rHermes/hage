@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <array>
 #include <new>
 
 namespace hage {
@@ -10,4 +12,27 @@ static constexpr auto destructive_interference_size = std::hardware_destructive_
 static constexpr std::size_t constructive_interference_size = 64;
 static constexpr std::size_t destructive_interference_size = 64;
 #endif
+
+template<std::size_t N>
+struct static_string
+{
+  std::array<char, N> str{};
+  constexpr static_string(const char (&s)[N]) { std::ranges::copy(s, str.data()); }
+};
+
+template<static_string s>
+struct format_string
+{
+  static constexpr const char* string = s.str.data();
+};
+
+namespace literals {
+template<static_string s>
+constexpr auto
+operator""_fmt()
+{
+  return format_string<s>{};
+}
+}
+
 };

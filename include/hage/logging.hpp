@@ -284,6 +284,22 @@ class Logger
   Buffer buffer_{};
   std::atomic_unsigned_lock_free available_{ 0 };
 
+  template <typename... Args>
+  void common_log(Args&& ...args)
+  {
+    // TODO(rHermes): Implement a max number of messages, that we can deduct based
+    // on the capacity of the buffer and make sure the amount is not that. For now
+    // we do a dummy of 100
+    available_.wait(10, std::memory_order::acquire);
+
+    bool good = try_log(std::forward<Args>(args)...);
+    if (!good)
+      throw std::runtime_error("We were unable to write to the log, this should never happen");
+
+    available_.fetch_add(1, std::memory_order::release);
+    available_.notify_one();
+  }
+
 public:
   using loggingFunction = std::add_pointer_t<bool(Buffer&)>;
 
@@ -291,6 +307,38 @@ public:
   explicit Logger(Buffer buff)
     : buffer_{ std::move(buff) }
   {
+  }
+
+  template<auto S, typename... Args>
+  bool try_log(format_string<S>, Args&&... args)
+  {
+    auto trampoline = +[](Buffer& buffer) {
+      // not using an optional because your interface effectively requires default constructibility anyway
+      std::tuple<typename Serializer<Buffer, Args>::serialized_type...> results;
+      bool success = [&results, &buffer]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return (... and read_from_buffer<Buffer, Args>(buffer, std::get<Is>(results)));
+      }(std::index_sequence_for<Args...>{});
+      if (!success)
+        return false;
+
+      auto logLine = std::apply([](auto&&... ts) { return std::format(format_string<S>::string, ts...); }, results);
+
+      std::cout << logLine << '\n';
+
+      return true;
+    };
+
+    buffer_.start_write();
+
+    bool good = write_to_buffer(buffer_, trampoline);
+    good = good && ((write_to_buffer(buffer_, args)) && ...);
+
+    if (good)
+      buffer_.finish_write();
+    else
+      buffer_.cancel_write();
+
+    return good;
   }
 
   template<typename... Args>
@@ -306,6 +354,7 @@ public:
       bool success = [&results, &buffer]<std::size_t... Is>(std::index_sequence<Is...>) {
         return (... and read_from_buffer<Buffer, Args>(buffer, std::get<Is>(results)));
       }(std::index_sequence_for<Args...>{});
+
       if (!success)
         return false;
 
@@ -347,34 +396,30 @@ public:
     return good;
   }
 
-  template<typename... Args>
-  void log(std::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
-  {
-    // TODO(rHermes): Implement a max number of messages, that we can deduct based
-    // on the capacity of the buffer and make sure the amount is not that. For now
-    // we do a dummy of 100
-    available_.wait(10, std::memory_order::acquire);
-
-    bool good = try_log(std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
-    if (!good)
-      throw std::runtime_error("We were unable to write to the log, this should never happen");
-
-    available_.fetch_add(1, std::memory_order::release);
-    available_.notify_one();
-  }
-
   // This can only be used with the log function pair, otherwise
   // this thread will never be woken up again.
   void read_log()
   {
     available_.wait(0, std::memory_order::acquire);
 
-    bool good = try_read_log();
-    if (!good)
+    if (!try_read_log())
       throw std::runtime_error("We were unable to read from read_log, this should never happen");
 
     available_.fetch_sub(1, std::memory_order::release);
     available_.notify_one();
   }
+
+  template<typename... Args>
+  void log(std::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  {
+    common_log(std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
+  }
+
+  template<auto S, typename... Args>
+  void log(format_string<S>&& f, Args&&... args)
+  {
+    common_log(std::forward<format_string<S>>(f), std::forward<Args>(args)...);
+  }
+
 };
 };

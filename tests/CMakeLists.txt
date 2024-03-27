@@ -13,6 +13,8 @@ if (MSCV)
 else()
     target_compile_options(hage_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(hage_test PRIVATE -Wno-interference-size)
+
+    # target_compile_options(hage_test PRIVATE -fconcepts-diagnostics-depth=2)
 endif()
 
 
