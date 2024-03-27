@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <new>
+#include <string_view>
 
 namespace hage {
 #ifdef __cpp_lib_hardware_interference_size
@@ -18,12 +19,21 @@ struct static_string
 {
   std::array<char, N> str{};
   constexpr static_string(const char (&s)[N]) { std::ranges::copy(s, str.data()); }
+
+  [[nodiscard]] constexpr std::string_view data() const
+  {
+    const auto view = std::string_view(str.data(), N);
+    if (view.ends_with('\0'))
+      return view.substr(0, view.size()-1);
+    else
+      return view;
+  }
 };
 
 template<static_string s>
 struct format_string
 {
-  static constexpr const char* string = s.str.data();
+  static constexpr std::string_view string = s.data();
 };
 
 namespace literals {

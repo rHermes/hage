@@ -6,13 +6,14 @@
 #include <atomic>
 #include <cstring>
 #include <deque>
-#include <format>
-#include <iostream>
 #include <mutex>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+
+#include <fmt/compile.h>
+#include <fmt/core.h>
 
 namespace hage {
 
@@ -228,11 +229,11 @@ struct Serializer<BufferType, T, std::enable_if_t<std::is_scalar_v<std::remove_c
 };
 
 template<typename BufferType, typename T>
-struct Serializer<BufferType, T, std::enable_if_t<std::is_convertible_v<T, std::string_view>>>
+struct Serializer<BufferType, T, std::enable_if_t<std::is_convertible_v<T, fmt::string_view>>>
 {
   using serialized_type = std::string;
 
-  bool to_bytes(BufferType& buffer, const std::string_view val)
+  bool to_bytes(BufferType& buffer, const fmt::string_view val)
   {
     bool good = write_to_buffer(buffer, val.size());
     good = good && buffer.write(std::as_bytes(std::span(val.begin(), val.end())));
@@ -241,7 +242,7 @@ struct Serializer<BufferType, T, std::enable_if_t<std::is_convertible_v<T, std::
 
   bool from_bytes(BufferType& buffer, serialized_type& val)
   {
-    std::string_view::size_type sz;
+    std::size_t sz;
     if (!read_from_buffer<BufferType, decltype(sz)>(buffer, sz))
       return false;
 
@@ -284,8 +285,8 @@ class Logger
   Buffer buffer_{};
   std::atomic_unsigned_lock_free available_{ 0 };
 
-  template <typename... Args>
-  void common_log(Args&& ...args)
+  template<typename... Args>
+  void common_log(Args&&... args)
   {
     // TODO(rHermes): Implement a max number of messages, that we can deduct based
     // on the capacity of the buffer and make sure the amount is not that. For now
@@ -321,10 +322,10 @@ public:
       if (!success)
         return false;
 
-      auto logLine = std::apply([](auto&&... ts) { return std::format(format_string<S>::string, ts...); }, results);
+      auto logLine =
+        std::apply([](auto&&... ts) { return fmt::format(FMT_COMPILE(format_string<S>::string), ts...); }, results);
 
-      std::cout << logLine << '\n';
-
+      fmt::println(logLine);
       return true;
     };
 
@@ -342,7 +343,7 @@ public:
   }
 
   template<typename... Args>
-  bool try_log(std::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
+  bool try_log(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
   {
     auto trampoline = +[](Buffer& buffer) {
       std::string st;
@@ -361,10 +362,9 @@ public:
       // Simpler version, if we cannot have errors;
       // auto results = std::tuple{ read_from_buffer<Buffer, Args>(buffer)... };
       auto logLine =
-        std::apply([&st](auto&&... ts) { return std::vformat(st, std::make_format_args(ts...)); }, results);
+        std::apply([&st](auto&&... ts) { return fmt::vformat(st, fmt::make_format_args(ts...)); }, results);
 
-      std::cout << logLine << '\n';
-
+      fmt::println(fmt::runtime(logLine));
       return true;
     };
 
@@ -410,7 +410,7 @@ public:
   }
 
   template<typename... Args>
-  void log(std::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  void log(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
   {
     common_log(std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -420,6 +420,5 @@ public:
   {
     common_log(std::forward<format_string<S>>(f), std::forward<Args>(args)...);
   }
-
 };
 };

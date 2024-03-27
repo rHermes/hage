@@ -19,6 +19,7 @@ the features:
 - Type safety for all formatting strings'
 - Requires C++20
 - Allows for format string passing via template parameters!
+- Uses `fmt` for fast formatting.
 
 Here is an example showcasing its use, with two threads. Notice that they are using the synchronous APIs, there are also
 non-blocking version of both of these, by appending the `try_` prefix to the functions.
@@ -60,7 +61,7 @@ time, we are able to pass the type information and order from the **hot thread**
 any communication at runtime.
 
 To improve the ergonomics for the user, and to ensure type safety, we instead expose a format string based API, provided
-by `std::format`. Since we know the input parameters, we are able to create a custom trampoline for each input statement
+by `fmt::format`. Since we know the input parameters, we are able to create a custom trampoline for each input statement
 which will read the correct number and type of arguments in. We still have to send the format string over the FIFO,
 as we cannot capture it from the lambda we use to create the trampoline. This is a source of potential optimization,
 as these format strings are created at compile time, and will not go out of scope for the duration of the program.
@@ -92,4 +93,5 @@ TODO:
 - Produce better examples and tests.
 - Make error handling in reading better.
 - Allow the user to specify sinks.
-- Switch to using fmt::print
+- Create benchmarks
+- Implement logging levels, with filtering

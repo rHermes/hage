@@ -1,3 +1,11 @@
+# Testing library
+FetchContent_Declare(
+        fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG 10.2.1
+)
+
+FetchContent_MakeAvailable(fmt)
 
 
 set(HEADER_LIST
@@ -12,6 +20,8 @@ target_include_directories(hage_lib PUBLIC ../include)
 
 # Users of this library needs c++20
 target_compile_features(hage_lib PUBLIC cxx_std_20)
+
+target_link_libraries(hage_lib PRIVATE fmt::fmt)
 
 if (MSCV)
 else()
