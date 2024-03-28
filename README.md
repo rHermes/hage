@@ -79,6 +79,8 @@ using namespace hage::literals;
 logger.log("Hello there"_fmt, 23);
 ```
 
+I've decided to get the time in the hot thread, but this can easily be changed to put it into the logger thread. 
+The idea is that we want to know the time when it was logged, rather than when it was 
 
 Another semi mistake I've made, is that I've made the Buffer implementation a bit too flexible. Really it will always
 be some sort of ring buffer. Now it's very general. The part where this reflects a lot is that the read operations
@@ -87,11 +89,26 @@ information on it to log. This was added more for the ability to use a network o
 
 In the future I'm going to rip that out and instead use exceptions if we cannot read.
 
-TODO:
+#### TODO
 
+- Update the readme
+  - Up-to-date code examples
+  - History section moved down, It's not so interesting.
 - Implement the idea of a maximum size for a message.
 - Produce better examples and tests.
 - Make error handling in reading better.
-- Allow the user to specify sinks.
 - Create benchmarks
-- Implement logging levels, with filtering
+- Add some sort of mode where we can `try_to_write`, and `always_read` which doesn't attempt to read, but merely sees
+if there are any logs available? This needs to be benchmarked.
+- Add macros for logging, that gets removed at compile time, if we define away the log level
+- Create chain sink
+- Create file sink
+- Create rotating file sink
+- Create more serializers for standard library.
+- Think about how this will integrate towards a stop source.
+  - What happens when the writer is done?
+- Should I implement some sort of tag system to the loggers that is passed to the sinks? Or should that be on the sinks?
+- Create a test sink, that we can use to expect the outputs.
+  - This is because if we will be passing the logger around, we don't want all functions to be templated.
+  - The one indirection is ok.
+  - The logger will own the storage. `std::unique_ptr`

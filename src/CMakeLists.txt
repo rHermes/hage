@@ -11,9 +11,16 @@ FetchContent_MakeAvailable(fmt)
 set(HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/misc.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/ring_buffer.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/queue_buffer.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/logger.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/serializers.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/sink.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/console_sink.hpp"
 )
 
-add_library(hage_lib lib.cpp ${HEADER_LIST})
+add_library(hage_lib ${HEADER_LIST}
+        logging/console_sink.cpp)
 
 # We need this directory, and users of our library will need it to.
 target_include_directories(hage_lib PUBLIC ../include)
