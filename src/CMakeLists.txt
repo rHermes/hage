@@ -13,6 +13,7 @@ set(HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/logging.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/ring_buffer.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/queue_buffer.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/byte_buffer.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/logger.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/serializers.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/sink.hpp"

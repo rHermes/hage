@@ -1,5 +1,7 @@
 #pragma once
 
+#include "byte_buffer.hpp"
+
 #include <atomic>
 #include <fmt/compile.h>
 #include <fmt/core.h>
@@ -41,18 +43,11 @@ operator""_fmt()
 }
 
 // Single producer, single consumer logger.
-template<typename Buffer>
 class Logger
 {
 public:
-  explicit Logger(Sink* sink)
-    : m_sink{ sink }
-  {
-  }
-
-  explicit Logger(Sink* sink, Buffer buff)
-    : m_sink{ sink }
-    , m_buffer{ std::move(buff) }
+  Logger(ByteBuffer* buffer, Sink* sink)
+    : m_buffer{buffer}, m_sink{ sink }
   {
   }
 
@@ -60,16 +55,15 @@ public:
 
   bool try_read_log()
   {
-    m_buffer.start_read();
+    const auto reader = m_buffer->get_reader();
     logging_function f{ nullptr };
-    auto good = read_from_buffer<Buffer, logging_function>(m_buffer, f);
-    good = good && f(m_buffer, *m_sink);
-    if (!good)
-      m_buffer.cancel_read();
-    else
-      m_buffer.finish_read();
+    auto good = read_from_buffer<logging_function>(*reader, f);
+    good = good && f(*reader, *m_sink);
 
-    return good;
+    if (good)
+      return reader->commit();
+
+    return false;
   }
 
   // This can only be used with the log function pair, otherwise
@@ -88,7 +82,7 @@ public:
   // Synchronus code
   template<typename... Args>
   void log(const LogLevel logLevel,
-           fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt,
+           fmt::format_string<typename Serializer<Args>::serialized_type...> fmt,
            Args&&... args)
   {
     common_log(logLevel, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
@@ -101,7 +95,7 @@ public:
   }
 
   template<typename... Args>
-  void trace(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  void trace(fmt::format_string<typename Serializer<Args>::serialized_type...> fmt, Args&&... args)
   {
     log(LogLevel::Trace, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -113,7 +107,7 @@ public:
   }
 
   template<typename... Args>
-  void debug(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  void debug(fmt::format_string<typename Serializer<Args>::serialized_type...> fmt, Args&&... args)
   {
     log(LogLevel::Debug, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -125,7 +119,7 @@ public:
   }
 
   template<typename... Args>
-  void info(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  void info(fmt::format_string<typename Serializer<Args>::serialized_type...> fmt, Args&&... args)
   {
     log(LogLevel::Info, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -137,7 +131,7 @@ public:
   }
 
   template<typename... Args>
-  void warn(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  void warn(fmt::format_string<typename Serializer<Args>::serialized_type...> fmt, Args&&... args)
   {
     log(LogLevel::Warn, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -149,7 +143,7 @@ public:
   }
 
   template<typename... Args>
-  void error(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  void error(fmt::format_string<typename Serializer<Args>::serialized_type...> fmt, Args&&... args)
   {
     log(LogLevel::Error, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -161,7 +155,7 @@ public:
   }
 
   template<typename... Args>
-  void critical(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...> fmt, Args&&... args)
+  void critical(fmt::format_string<typename Serializer<Args>::serialized_type...> fmt, Args&&... args)
   {
     log(LogLevel::Critical, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -173,19 +167,18 @@ public:
   }
 
   // Async function
+  template<typename... Args>
+  bool try_log(const LogLevel logLevel,
+               fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt,
+               Args&&... args)
+  {
+    return common_try_log(logLevel, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
+  }
 
   template<auto S, typename... Args>
   bool try_log(const LogLevel logLevel, FormatString<S>&& f, Args&&... args)
   {
     return common_try_log(logLevel, std::forward<FormatString<S>>(f), std::forward<Args>(args)...);
-  }
-
-  template<typename... Args>
-  bool try_log(const LogLevel logLevel,
-               fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt,
-               Args&&... args)
-  {
-    return common_try_log(logLevel, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
 
   template<auto S, typename... Args>
@@ -195,7 +188,7 @@ public:
   }
 
   template<typename... Args>
-  bool try_trace(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
+  bool try_trace(fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt, Args&&... args)
   {
     return try_log(LogLevel::Trace, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -207,10 +200,11 @@ public:
   }
 
   template<typename... Args>
-  bool try_debug(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
+  bool try_debug(fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt, Args&&... args)
   {
     return try_log(LogLevel::Debug, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
+
 
   template<auto S, typename... Args>
   bool try_info(FormatString<S>&& f, Args&&... args)
@@ -219,18 +213,11 @@ public:
   }
 
   template<typename... Args>
-  bool try_info(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
+  bool try_info(fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt, Args&&... args)
   {
     return try_log(LogLevel::Info, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
 
-  /*
-  template<typename... Args>
-  bool try_info(Args&&... args)
-  {
-    return try_log(LogLevel::Info, std::forward<Args>(args)...);
-  }
-  */
 
   template<auto S, typename... Args>
   bool try_warn(FormatString<S>&& f, Args&&... args)
@@ -239,7 +226,7 @@ public:
   }
 
   template<typename... Args>
-  bool try_warn(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
+  bool try_warn(fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt, Args&&... args)
   {
     return try_log(LogLevel::Warn, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -251,7 +238,7 @@ public:
   }
 
   template<typename... Args>
-  bool try_error(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
+  bool try_error(fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt, Args&&... args)
   {
     return try_log(LogLevel::Error, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
@@ -263,18 +250,20 @@ public:
   }
 
   template<typename... Args>
-  bool try_critical(fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt, Args&&... args)
+  bool try_critical(fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt, Args&&... args)
   {
     return try_log(LogLevel::Critical, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
 
 private:
-  using logging_function = std::add_pointer_t<bool(Buffer& l, Sink&)>;
+  using logging_function = std::add_pointer_t<bool(ByteBuffer::Reader& l, Sink&)>;
 
   std::atomic<LogLevel> m_minLevel{ LogLevel::Info };
+
+  ByteBuffer* m_buffer{};
   Sink* m_sink;
 
-  Buffer m_buffer{};
+
   std::atomic_unsigned_lock_free m_available{ 0 };
 
   template<typename... Args>
@@ -307,16 +296,16 @@ private:
   template<auto S, typename... Args>
   bool internal_try_log(const LogLevel logLevel, FormatString<S>, Args&&... args)
   {
-    auto trampoline = +[](Buffer& buffer, Sink& sink) {
+    auto trampoline = +[](ByteBuffer::Reader& reader, Sink& sink) {
       LogLevel level;
-      if (!read_from_buffer<Buffer, LogLevel>(buffer, level))
+      if (!read_from_buffer<LogLevel>(reader, level))
         return false;
 
       // not using an optional because your interface effectively requires default constructibility anyway
-      std::tuple<typename Serializer<Buffer, Args>::serialized_type...> results;
+      std::tuple<typename Serializer<Args>::serialized_type...> results;
 
-      bool success = [&results, &buffer]<std::size_t... Is>(std::index_sequence<Is...>) {
-        return (... and read_from_buffer<Buffer, Args>(buffer, std::get<Is>(results)));
+      bool success = [&results, &reader]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return (... and read_from_buffer<Args>(reader, std::get<Is>(results)));
       }(std::index_sequence_for<Args...>{});
 
       if (!success)
@@ -330,39 +319,38 @@ private:
       return true;
     };
 
-    m_buffer.start_write();
+    const auto writer = m_buffer->get_writer();
 
-    bool good = write_to_buffer(m_buffer, trampoline);
-    good = good && write_to_buffer(m_buffer, logLevel);
-    good = good && ((write_to_buffer(m_buffer, args)) && ...);
+
+    bool good = write_to_buffer(*writer, trampoline);
+    good = good && write_to_buffer(*writer, logLevel);
+    good = good && ((write_to_buffer(*writer, args)) && ...);
 
     if (good)
-      m_buffer.finish_write();
+      return writer->commit();
     else
-      m_buffer.cancel_write();
-
-    return good;
+      return false;
   }
 
   template<typename... Args>
   bool internal_try_log(const LogLevel logLevel,
-                        fmt::format_string<typename Serializer<Buffer, Args>::serialized_type...>&& fmt,
+                        fmt::format_string<typename Serializer<Args>::serialized_type...>&& fmt,
                         Args&&... args)
   {
     // Notice the + here, it forces the lambda to become a function pointer.
-    auto trampoline = +[](Buffer& buffer, Sink& sink) {
+    auto trampoline = +[](ByteBuffer::Reader& reader, Sink& sink) {
       LogLevel level;
-      if (!read_from_buffer<Buffer, LogLevel>(buffer, level))
+      if (!read_from_buffer<LogLevel>(reader, level))
         return false;
 
       std::string st;
-      if (!read_from_buffer<Buffer, decltype(fmt.get())>(buffer, st))
+      if (!read_from_buffer<decltype(fmt.get())>(reader, st))
         return false;
 
       // not using an optional because your interface effectively requires default constructibility anyway
-      std::tuple<typename Serializer<Buffer, Args>::serialized_type...> results;
-      bool success = [&results, &buffer]<std::size_t... Is>(std::index_sequence<Is...>) {
-        return (... and read_from_buffer<Buffer, Args>(buffer, std::get<Is>(results)));
+      std::tuple<typename Serializer<Args>::serialized_type...> results;
+      bool success = [&results, &reader]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return (... and read_from_buffer<Args>(reader, std::get<Is>(results)));
       }(std::index_sequence_for<Args...>{});
 
       if (!success)
@@ -377,19 +365,17 @@ private:
       return true;
     };
 
-    m_buffer.start_write();
+    const auto writer = m_buffer->get_writer();
 
-    bool good = write_to_buffer(m_buffer, trampoline);
-    good = good && write_to_buffer(m_buffer, logLevel);
-    good = good && write_to_buffer(m_buffer, fmt.get());
-    good = good && ((write_to_buffer(m_buffer, args)) && ...);
+    bool good = write_to_buffer(*writer, trampoline);
+    good = good && write_to_buffer(*writer, logLevel);
+    good = good && write_to_buffer(*writer, fmt.get());
+    good = good && ((write_to_buffer(*writer, args)) && ...);
 
     if (good)
-      m_buffer.finish_write();
-    else
-      m_buffer.cancel_write();
+      return writer->commit();
 
-    return good;
+    return false;
   }
 };
 }

@@ -20,6 +20,8 @@ the features:
 - Requires C++20
 - Allows for format string passing via template parameters!
 - Uses `fmt` for fast formatting.
+- Allows for user implemented buffer types
+- Allows for user implemented logger sinks
 
 Here is an example showcasing its use, with two threads. Notice that they are using the synchronous APIs, there are also
 non-blocking version of both of these, by appending the `try_` prefix to the functions.
@@ -32,7 +34,9 @@ non-blocking version of both of these, by appending the `try_` prefix to the fun
 
 int main()
 {
-  hage::Logger<hage::RingBuffer<4096>> logger;
+  hage::ConsoleSink consoleSink;
+  hage::RingBuffer<4096> ringBuffer;
+  hage::Logger logger(&ringBuffer, &consoleSink);
 
   constexpr std::int64_t TIMES = 10;
   std::thread writer([&logger]() {
@@ -112,3 +116,4 @@ if there are any logs available? This needs to be benchmarked.
   - This is because if we will be passing the logger around, we don't want all functions to be templated.
   - The one indirection is ok.
   - The logger will own the storage. `std::unique_ptr`
+- Add some sort of integration towards co_routines, to allow a single logger thread to async read from multiple loggers.

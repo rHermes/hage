@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../misc.hpp"
+#include "byte_buffer.hpp"
 
 #include <span>
 
@@ -8,7 +9,7 @@ namespace hage {
 // This is a rather dumb container, but it will work for most
 // of our tests.
 template<std::ptrdiff_t N>
-class RingBuffer
+class RingBuffer final : public ByteBuffer
 {
 
   alignas(details::destructive_interference_size) std::atomic<std::ptrdiff_t> m_head{ 0 };
@@ -17,10 +18,143 @@ class RingBuffer
   alignas(details::destructive_interference_size) std::atomic<std::ptrdiff_t> m_tail{ 0 };
   alignas(details::destructive_interference_size) std::ptrdiff_t m_cachedTail{ 0 };
 
-  alignas(details::destructive_interference_size) std::ptrdiff_t m_shadowHead{ 0 };
-  alignas(details::destructive_interference_size) std::ptrdiff_t m_shadowTail{ 0 };
-
   alignas(details::destructive_interference_size) std::array<std::byte, N + 1> m_buff;
+
+  alignas(details::constructive_interference_size) std::atomic_flag m_hasReader;
+  alignas(details::constructive_interference_size) std::atomic_flag m_hasWriter;
+
+
+  class Reader final : public ByteBuffer::Reader
+  {
+  public:
+
+    explicit Reader(RingBuffer& parent) : m_parent{parent}
+    {
+      if (m_parent.m_hasReader.test_and_set(std::memory_order::acq_rel))
+        throw std::runtime_error("We can only have one concurrent reader for RingBuffer");
+
+      m_shadowHead = m_parent.m_head.load(std::memory_order::relaxed);
+    }
+
+    ~Reader() override
+    {
+      m_parent.m_hasReader.clear(std::memory_order::release);
+    }
+
+    bool read(std::span<std::byte> dst) override
+    {
+      while (!dst.empty()) {
+        const auto sz = static_cast<std::ptrdiff_t>(dst.size_bytes());
+        if (m_shadowHead == N + 1)
+          m_shadowHead = 0;
+
+        if (m_shadowHead == m_parent.m_cachedTail) {
+          m_parent.m_cachedTail = m_parent.m_tail.load(std::memory_order::acquire);
+          if (m_shadowHead == m_parent.m_cachedTail)
+            return false;
+        }
+
+        if (m_shadowHead < m_parent.m_cachedTail) {
+          const auto spaceLeft = m_parent.m_cachedTail - m_shadowHead;
+          const auto readSize = std::min(sz, spaceLeft);
+
+          std::memcpy(dst.data(), m_parent.m_buff.data() + m_shadowHead, static_cast<std::size_t>(readSize));
+          m_shadowHead += readSize;
+
+          dst = dst.subspan(static_cast<std::size_t>(readSize));
+        } else {
+          const auto spaceLeft = N + 1 - m_shadowHead;
+          const auto readSize = std::min(sz, spaceLeft);
+
+          std::memcpy(dst.data(), m_parent.m_buff.data() + m_shadowHead, static_cast<std::size_t>(readSize));
+          m_shadowHead += readSize;
+
+          dst = dst.subspan(static_cast<std::size_t>(readSize));
+        }
+      }
+
+      return true;
+    }
+
+    bool commit() override
+    {
+      m_parent.m_head.store(m_shadowHead, std::memory_order::release);
+      return true;
+    }
+
+  private:
+    RingBuffer& m_parent;
+    std::ptrdiff_t m_shadowHead{0};
+  };
+
+  class Writer final : public ByteBuffer::Writer
+  {
+  public:
+
+    explicit Writer(RingBuffer& parent) : m_parent{parent}
+    {
+      if (m_parent.m_hasWriter.test_and_set(std::memory_order::acq_rel))
+        throw std::runtime_error("We can only have one concurrent writer for RingBuffer");
+
+      m_shadowTail = m_parent.m_tail.load(std::memory_order::relaxed);
+    }
+
+    ~Writer() override
+    {
+      m_parent.m_hasWriter.clear(std::memory_order::release);
+    }
+
+    bool commit() override
+    {
+      m_parent.m_tail.store(m_shadowTail, std::memory_order::release);
+      return true;
+    }
+
+    bool write(std::span<const std::byte> src) override
+    {
+      while (!src.empty()) {
+        const auto sz = static_cast<std::ptrdiff_t>(src.size_bytes());
+
+        if (m_shadowTail == N + 1) {
+          if (m_parent.m_cachedHead == 0) {
+            m_parent.m_cachedHead = m_parent.m_head.load(std::memory_order::acquire);
+            if (m_parent.m_cachedHead == 0)
+              return false;
+          }
+          m_shadowTail = 0;
+        } else if (m_shadowTail + 1 == m_parent.m_cachedHead) {
+          m_parent.m_cachedHead = m_parent.m_head.load(std::memory_order::acquire);
+          if (m_shadowTail + 1 == m_parent.m_cachedHead)
+            return false;
+        }
+
+        if (m_parent.m_cachedHead <= m_shadowTail) {
+          const auto spaceLeft = N + 1 - m_shadowTail;
+          const auto writeSize = std::min(sz, spaceLeft);
+
+          std::memcpy(m_parent.m_buff.data() + m_shadowTail, src.data(), static_cast<std::size_t>(writeSize));
+          m_shadowTail += writeSize;
+
+          src = src.subspan(static_cast<std::size_t>(writeSize));
+        } else {
+          // In this regard, the tail is behind the head
+          const auto spaceLeft = m_parent.m_cachedHead - m_shadowTail - 1;
+          const auto writeSize = std::min(sz, spaceLeft);
+
+          std::memcpy(m_parent.m_buff.data() + m_shadowTail, src.data(), static_cast<std::size_t>(writeSize));
+          m_shadowTail += writeSize;
+
+          src = src.subspan(static_cast<std::size_t>(writeSize));
+        }
+      }
+
+      return true;
+    }
+
+  private:
+    RingBuffer& m_parent;
+    std::ptrdiff_t m_shadowTail{0};
+  };
 
 public:
   RingBuffer() = default;
@@ -33,89 +167,15 @@ public:
   RingBuffer(RingBuffer&&) = delete;
   RingBuffer& operator=(RingBuffer&&) = delete;
 
-  bool read(std::span<std::byte> dst)
+  [[nodiscard]] std::unique_ptr<ByteBuffer::Reader> get_reader() override
   {
-    while (!dst.empty()) {
-      const auto sz = static_cast<std::ptrdiff_t>(dst.size_bytes());
-      if (m_shadowHead == N + 1)
-        m_shadowHead = 0;
-
-      if (m_shadowHead == m_cachedTail) {
-        m_cachedTail = m_tail.load(std::memory_order::acquire);
-        if (m_shadowHead == m_cachedTail)
-          return false;
-      }
-
-      if (m_shadowHead < m_cachedTail) {
-        const auto spaceLeft = m_cachedTail - m_shadowHead;
-        const auto readSize = std::min(sz, spaceLeft);
-
-        std::memcpy(dst.data(), m_buff.data() + m_shadowHead, static_cast<std::size_t>(readSize));
-        m_shadowHead += readSize;
-
-        dst = dst.subspan(static_cast<std::size_t>(readSize));
-      } else {
-        const auto spaceLeft = N + 1 - m_shadowHead;
-        const auto readSize = std::min(sz, spaceLeft);
-
-        std::memcpy(dst.data(), m_buff.data() + m_shadowHead, static_cast<std::size_t>(readSize));
-        m_shadowHead += readSize;
-
-        dst = dst.subspan(static_cast<std::size_t>(readSize));
-      }
-    }
-
-    return true;
+    return std::make_unique<Reader>(*this);
   }
 
-  bool write(std::span<const std::byte> src)
+  [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override
   {
-    while (!src.empty()) {
-      const auto sz = static_cast<std::ptrdiff_t>(src.size_bytes());
-
-      if (m_shadowTail == N + 1) {
-        if (m_cachedHead == 0) {
-          m_cachedHead = m_head.load(std::memory_order::acquire);
-          if (m_cachedHead == 0)
-            return false;
-        }
-        m_shadowTail = 0;
-      } else if (m_shadowTail + 1 == m_cachedHead) {
-        m_cachedHead = m_head.load(std::memory_order::acquire);
-        if (m_shadowTail + 1 == m_cachedHead)
-          return false;
-      }
-
-      if (m_cachedHead <= m_shadowTail) {
-        const auto spaceLeft = N + 1 - m_shadowTail;
-        const auto writeSize = std::min(sz, spaceLeft);
-
-        std::memcpy(m_buff.data() + m_shadowTail, src.data(), static_cast<std::size_t>(writeSize));
-        m_shadowTail += writeSize;
-
-        src = src.subspan(static_cast<std::size_t>(writeSize));
-      } else {
-        // In this regard, the tail is behind the head
-        const auto spaceLeft = m_cachedHead - m_shadowTail - 1;
-        const auto writeSize = std::min(sz, spaceLeft);
-
-        std::memcpy(m_buff.data() + m_shadowTail, src.data(), static_cast<std::size_t>(writeSize));
-        m_shadowTail += writeSize;
-
-        src = src.subspan(static_cast<std::size_t>(writeSize));
-      }
-    }
-
-    return true;
+    return std::make_unique<Writer>(*this);
   }
-
-  void start_read() { m_shadowHead = m_head.load(std::memory_order::relaxed); }
-  void finish_read() { m_head.store(m_shadowHead, std::memory_order::release); }
-  void cancel_read() {}
-
-  void start_write() { m_shadowTail = m_tail.load(std::memory_order::relaxed); }
-  void finish_write() { m_tail.store(m_shadowTail, std::memory_order::release); }
-  void cancel_write() {}
 };
 
 }
