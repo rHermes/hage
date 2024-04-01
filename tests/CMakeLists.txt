@@ -7,7 +7,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(doctest)
 
 add_executable(hage_test doctest.cpp
-        logging_tests.cpp)
+        logging_tests.cpp
+        test_sink.cpp
+        test_sink.hpp)
 
 if (MSCV)
 else()

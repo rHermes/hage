@@ -64,7 +64,11 @@ class QueueBuffer final : public ByteBuffer
       std::scoped_lock lk(m_parent.m_mtx);
 
       m_parent.m_q.erase(m_parent.m_q.begin(), m_newReadLevel);
-      m_parent.m_readLevel = m_newReadLevel;
+      m_parent.m_readLevel = m_parent.m_q.begin();
+      m_newReadLevel = m_parent.m_readLevel;
+
+      if (m_parent.m_q.empty())
+        m_parent.m_writeLevel = m_parent.m_q.end();
 
       return true;
     }

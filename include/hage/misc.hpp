@@ -16,4 +16,9 @@ static constexpr std::size_t destructive_interference_size = 64;
 #endif
 }
 
+constexpr auto byte_array(auto... a) -> std::array<std::byte, sizeof...(a)>
+{
+  return { static_cast<std::byte>(a)... };
+}
+
 };
