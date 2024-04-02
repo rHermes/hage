@@ -9,7 +9,6 @@ using namespace hage;
 void
 ConsoleSink::receive(const LogLevel level, const timestamp_type& ts, const std::string_view line)
 {
-
   auto logLine = [&line, &ts](const std::string_view& lev, const fmt::color color) {
     fmt::print(FMT_COMPILE("[{:%F %T %z}] [{: <5}]: {}\n"), ts, styled(lev, fg(color)),  line);
   };

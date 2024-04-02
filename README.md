@@ -22,6 +22,7 @@ the features:
 - Uses `fmt` for fast formatting.
 - Allows for user implemented buffer types
 - Allows for user implemented logger sinks
+- Good test suite (Always improving!)
 
 Here is an example showcasing its use, with two threads. Notice that they are using the synchronous APIs, there are also
 non-blocking version of both of these, by appending the `try_` prefix to the functions.
@@ -80,7 +81,7 @@ logger.log(hage::format_string<"Hello there {}">(), 23);
 
 // Or using our literals
 using namespace hage::literals;
-logger.log("Hello there"_fmt, 23);
+logger.log("Hello there {}"_fmt, 23);
 ```
 
 I've decided to get the time in the hot thread, but this can easily be changed to put it into the logger thread. 
@@ -112,8 +113,4 @@ if there are any logs available? This needs to be benchmarked.
 - Think about how this will integrate towards a stop source.
   - What happens when the writer is done?
 - Should I implement some sort of tag system to the loggers that is passed to the sinks? Or should that be on the sinks?
-- Create a test sink, that we can use to expect the outputs.
-  - This is because if we will be passing the logger around, we don't want all functions to be templated.
-  - The one indirection is ok.
-  - The logger will own the storage. `std::unique_ptr`
 - Add some sort of integration towards co_routines, to allow a single logger thread to async read from multiple loggers.

@@ -1,8 +1,7 @@
-//
-// Created by rhermes on 4/1/24.
-//
-
 #include "test_sink.hpp"
 
-namespace hage {
-} // hage
+void
+TestSink::receive(hage::LogLevel level, const timestamp_type& ts, std::string_view line)
+{
+  m_stored.emplace_back(level, ts, std::string(line));
+}
