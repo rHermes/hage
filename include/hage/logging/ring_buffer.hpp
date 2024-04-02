@@ -43,6 +43,9 @@ class RingBuffer final : public ByteBuffer
 
     bool read(std::span<std::byte> dst) override
     {
+      if (N < dst.size_bytes())
+        return false;
+
       while (!dst.empty()) {
         const auto sz = static_cast<std::ptrdiff_t>(dst.size_bytes());
         if (m_shadowHead == N + 1)
@@ -112,6 +115,9 @@ class RingBuffer final : public ByteBuffer
 
     bool write(std::span<const std::byte> src) override
     {
+      if (N < src.size_bytes())
+        return false;
+
       while (!src.empty()) {
         const auto sz = static_cast<std::ptrdiff_t>(src.size_bytes());
 

@@ -16,9 +16,13 @@ else()
     target_compile_options(hage_test PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(hage_test PRIVATE -Wno-interference-size)
 
+
+
+
     # target_compile_options(hage_test PRIVATE -fconcepts-diagnostics-depth=2)
 endif()
 
+target_compile_definitions(hage_test PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS)
 
 target_link_libraries(hage_test PRIVATE hage_lib doctest::doctest)
 add_test(NAME hage_test_test COMMAND hage_test)

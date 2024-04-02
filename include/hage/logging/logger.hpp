@@ -51,7 +51,7 @@ public:
   {
   }
 
-  constexpr void set_log(const LogLevel level) { m_minLevel.store(level, std::memory_order::relaxed); }
+  void set_log(const LogLevel level) { m_minLevel.store(level, std::memory_order::relaxed); }
 
   bool try_read_log()
   {

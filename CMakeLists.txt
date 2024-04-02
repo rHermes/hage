@@ -21,8 +21,14 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         add_compile_options("-march=native")
     endif()
 
+    #CHECK_CXX_COMPILER_FLAG("-ftime-trace" COMPILER_SUPPORTS_TIME_TRACE)
+    #if(COMPILER_SUPPORTS_TIME_TRACE)
+    #    add_compile_options("-ftime-trace")
+    #endif()
+
     include(CTest)
 endif()
+
 
 
 
