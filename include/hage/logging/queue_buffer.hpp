@@ -55,6 +55,7 @@ class QueueBuffer final : public ByteBuffer
 
       std::copy(first, end, dst.begin());
 
+      m_bytesRead += dst.size_bytes();
       m_newReadLevel = end;
       return true;
     }
@@ -72,10 +73,15 @@ class QueueBuffer final : public ByteBuffer
 
       return true;
     }
+    [[nodiscard]] std::size_t bytes_read() const override
+    {
+      return m_bytesRead;
+    }
 
   private:
     QueueBuffer& m_parent;
     iterator_type m_newReadLevel;
+    std::size_t m_bytesRead{0};
   };
 
   class Writer final : public ByteBuffer::Writer
@@ -107,6 +113,8 @@ class QueueBuffer final : public ByteBuffer
       else
         m_parent.m_q.insert(m_parent.m_q.end(), src.begin(), src.end());
 
+      m_bytesWritten += src.size_bytes();
+
       return true;
     }
 
@@ -117,9 +125,14 @@ class QueueBuffer final : public ByteBuffer
 
       return true;
     }
+    [[nodiscard]] std::size_t bytes_written() const override
+    {
+      return m_bytesWritten;
+    }
 
   private:
     QueueBuffer& m_parent;
+    std::size_t m_bytesWritten{0};
   };
 
 public:
@@ -132,6 +145,11 @@ public:
   [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override
   {
     return std::make_unique<Writer>(*this);
+  }
+
+  [[nodiscard]] constexpr std::size_t capacity() override
+  {
+    return std::numeric_limits<std::size_t>::max();
   }
 
 };

@@ -46,14 +46,20 @@ operator""_fmt()
 class Logger
 {
 public:
-  Logger(ByteBuffer* buffer, Sink* sink)
-    : m_buffer{buffer}, m_sink{ sink }
+  Logger(ByteBuffer* buffer, Sink* sink, const std::size_t maxMessageSize = 1000)
+    : m_buffer{buffer}, m_sink{ sink }, m_maxMessageSize(maxMessageSize)
   {
+    if (buffer->capacity() < m_maxMessageSize)
+      throw std::runtime_error("The buffer needs to be able to store at least one message");
+
+    m_maxMessages = buffer->capacity() / m_maxMessageSize;
   }
 
-  void set_log(const LogLevel level) { m_minLevel.store(level, std::memory_order::relaxed); }
+  void set_min_log_level(const LogLevel level) { m_minLevel.store(level, std::memory_order::relaxed); }
 
-  bool try_read_log()
+
+
+  bool try_read_log() const
   {
     const auto reader = m_buffer->get_reader();
     logging_function f{ nullptr };
@@ -263,8 +269,11 @@ private:
   ByteBuffer* m_buffer{};
   Sink* m_sink;
 
-
   std::atomic_unsigned_lock_free m_available{ 0 };
+
+  // The max message size in bytes.
+  std::size_t m_maxMessageSize;
+  std::size_t m_maxMessages{0};
 
   template<typename... Args>
   void common_log(const LogLevel logLevel, Args&&... args)
@@ -272,10 +281,7 @@ private:
     if (logLevel < m_minLevel.load(std::memory_order::relaxed))
       return;
 
-    // TODO(rHermes): Implement a max number of messages, that we can deduct based
-    // on the capacity of the buffer and make sure the amount is not that. For now
-    // we do a dummy of 100
-    m_available.wait(10, std::memory_order::acquire);
+    m_available.wait(m_maxMessageSize, std::memory_order::acquire);
 
     if (!internal_try_log(logLevel, std::forward<Args>(args)...))
       throw std::runtime_error("We were unable to write to the log, this should never happen");
@@ -326,6 +332,9 @@ private:
     good = good && write_to_buffer(*writer, logLevel);
     good = good && ((write_to_buffer(*writer, std::forward<Args>(args))) && ...);
 
+    if (m_maxMessageSize < writer->bytes_written())
+      return false;
+
     if (good)
       return writer->commit();
     else
@@ -371,6 +380,9 @@ private:
     good = good && write_to_buffer(*writer, logLevel);
     good = good && write_to_buffer(*writer, fmt.get());
     good = good && (... and (write_to_buffer(*writer, std::forward<Args>(args))));
+
+    if (m_maxMessageSize < writer->bytes_written())
+      return false;
 
     if (good)
       return writer->commit();

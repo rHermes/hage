@@ -6,6 +6,12 @@ It is not stable in **ANY WAY SHAPE OR FORM** and any usage is at your own risk.
 
 ## Components
 
+### Utility library
+
+This is not implemented yet, but here are some components I want:
+
+- `Result` type, that can be used for better error handling.
+
 ### Low latency logger
 
 The `hage::logger` construct is the result of me trying a technique I heard from a friend in HFT. Here are some of
@@ -99,7 +105,6 @@ In the future I'm going to rip that out and instead use exceptions if we cannot 
 - Update the readme
   - Up-to-date code examples
   - History section moved down, It's not so interesting.
-- Implement the idea of a maximum size for a message.
 - Produce better examples and tests.
 - Make error handling in reading better.
 - Create benchmarks

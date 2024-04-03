@@ -204,6 +204,47 @@ TEST_CASE("RingBuffer")
   }
 }
 
+TEST_CASE("logger should fail on too small a buffer")
+{
+  hage::NullSink sink;
+  hage::RingBuffer<100> ringBuffer;
+  REQUIRE_THROWS(hage::Logger(&ringBuffer, &sink));
+}
+
+TEST_CASE("logger should fail on too big a message")
+{
+  hage::NullSink sink;
+  hage::RingBuffer<4096> ringBuffer;
+  hage::Logger logger(&ringBuffer, &sink, 500);
+
+  std::string lel(600, 'l');
+  REQUIRE_UNARY_FALSE(logger.try_error("{}", lel));
+  REQUIRE_UNARY_FALSE(logger.try_error("{}"_fmt, lel));
+
+  std::string power(200, 'w');
+  REQUIRE_UNARY_FALSE(logger.try_error("{} {} {}", power, power, power));
+  REQUIRE_UNARY_FALSE(logger.try_error("{} {} {}"_fmt, power, power, power));
+}
+
+TEST_CASE("allow logger to set max message size")
+{
+  hage::NullSink sink;
+  hage::RingBuffer<4096> ringBuffer;
+  hage::Logger logger(&ringBuffer, &sink, 2000);
+
+  std::string lel(600, 'l');
+  REQUIRE_UNARY(logger.try_error("{}", lel));
+  REQUIRE_UNARY(logger.try_read_log());
+  REQUIRE_UNARY(logger.try_error("{}"_fmt, lel));
+  REQUIRE_UNARY(logger.try_read_log());
+
+  std::string power(200, 'w');
+  REQUIRE_UNARY(logger.try_error("{} {} {}", power, power, power));
+  REQUIRE_UNARY(logger.try_read_log());
+  REQUIRE_UNARY(logger.try_error("{} {} {}"_fmt, power, power, power));
+  REQUIRE_UNARY(logger.try_read_log());
+}
+
 TEST_CASE("test async interface")
 {
   TestSink sink;
@@ -236,7 +277,7 @@ TEST_CASE("test async interface")
 
   SUBCASE("Logger should filter on minimal log level")
   {
-    logger.set_log(hage::LogLevel::Warn);
+    logger.set_min_log_level(hage::LogLevel::Warn);
 
     REQUIRE_UNARY(logger.try_info("This is a debug message: {} {}", 10, "Fun"));
     REQUIRE_UNARY(logger.try_info("This is a debug message: {} {}"_fmt, 10, "Fun"));
@@ -247,7 +288,7 @@ TEST_CASE("test async interface")
 
   SUBCASE("Logger normal format should send all message types")
   {
-    logger.set_log(hage::LogLevel::Trace);
+    logger.set_min_log_level(hage::LogLevel::Trace);
 
     REQUIRE_UNARY(logger.try_trace("trace {}", 1));
     REQUIRE_UNARY(logger.try_debug("debug {}", 2));
@@ -272,7 +313,7 @@ TEST_CASE("test async interface")
 
   SUBCASE("Logger compile time format should send all message types")
   {
-    logger.set_log(hage::LogLevel::Trace);
+    logger.set_min_log_level(hage::LogLevel::Trace);
 
     REQUIRE_UNARY(logger.try_trace("trace {}"_fmt, 1));
     REQUIRE_UNARY(logger.try_debug("debug {}"_fmt, 2));
@@ -323,7 +364,7 @@ TEST_CASE("Test syncronized interface")
 
   SUBCASE("Logger should filter on minimal log level")
   {
-    logger.set_log(hage::LogLevel::Warn);
+    logger.set_min_log_level(hage::LogLevel::Warn);
 
     logger.info("This is a debug message: {} {}", 10, "Fun");
     logger.info("This is a debug message: {} {}"_fmt, 10, "Fun");
@@ -333,7 +374,7 @@ TEST_CASE("Test syncronized interface")
 
   SUBCASE("Logger normal format should send all message types")
   {
-    logger.set_log(hage::LogLevel::Trace);
+    logger.set_min_log_level(hage::LogLevel::Trace);
 
     logger.trace("trace {}", 1);
     logger.debug("debug {}", 2);
@@ -356,7 +397,7 @@ TEST_CASE("Test syncronized interface")
 
   SUBCASE("Logger compile time format should send all message types")
   {
-    logger.set_log(hage::LogLevel::Trace);
+    logger.set_min_log_level(hage::LogLevel::Trace);
 
     logger.trace("trace {}"_fmt, 1);
     logger.debug("debug {}"_fmt, 2);
@@ -387,7 +428,7 @@ TEST_CASE("testing syncronized logger")
   hage::Logger logger(&ringBuffer, &consoleSink);
   std::latch ready(2);
 
-  logger.set_log(hage::LogLevel::Debug);
+  logger.set_min_log_level(hage::LogLevel::Debug);
 
   constexpr std::int64_t TIMES = 2;
 

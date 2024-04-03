@@ -63,6 +63,7 @@ class RingBuffer final : public ByteBuffer
 
           std::memcpy(dst.data(), m_parent.m_buff.data() + m_shadowHead, static_cast<std::size_t>(readSize));
           m_shadowHead += readSize;
+          m_bytesRead += readSize;
 
           dst = dst.subspan(static_cast<std::size_t>(readSize));
         } else {
@@ -71,6 +72,7 @@ class RingBuffer final : public ByteBuffer
 
           std::memcpy(dst.data(), m_parent.m_buff.data() + m_shadowHead, static_cast<std::size_t>(readSize));
           m_shadowHead += readSize;
+          m_bytesRead += readSize;
 
           dst = dst.subspan(static_cast<std::size_t>(readSize));
         }
@@ -84,10 +86,15 @@ class RingBuffer final : public ByteBuffer
       m_parent.m_head.store(m_shadowHead, std::memory_order::release);
       return true;
     }
+    [[nodiscard]] std::size_t bytes_read() const override
+    {
+      return m_bytesRead;
+    }
 
   private:
     RingBuffer& m_parent;
     std::ptrdiff_t m_shadowHead{0};
+    std::size_t m_bytesRead{0};
   };
 
   class Writer final : public ByteBuffer::Writer
@@ -140,6 +147,7 @@ class RingBuffer final : public ByteBuffer
 
           std::memcpy(m_parent.m_buff.data() + m_shadowTail, src.data(), static_cast<std::size_t>(writeSize));
           m_shadowTail += writeSize;
+          m_bytesWritten += writeSize;
 
           src = src.subspan(static_cast<std::size_t>(writeSize));
         } else {
@@ -149,6 +157,7 @@ class RingBuffer final : public ByteBuffer
 
           std::memcpy(m_parent.m_buff.data() + m_shadowTail, src.data(), static_cast<std::size_t>(writeSize));
           m_shadowTail += writeSize;
+          m_bytesWritten += writeSize;
 
           src = src.subspan(static_cast<std::size_t>(writeSize));
         }
@@ -156,10 +165,15 @@ class RingBuffer final : public ByteBuffer
 
       return true;
     }
+    [[nodiscard]] std::size_t bytes_written() const override
+    {
+      return m_bytesWritten;
+    }
 
   private:
     RingBuffer& m_parent;
     std::ptrdiff_t m_shadowTail{0};
+    std::size_t m_bytesWritten{0};
   };
 
 public:
@@ -178,10 +192,8 @@ public:
     return std::make_unique<Reader>(*this);
   }
 
-  [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override
-  {
-    return std::make_unique<Writer>(*this);
-  }
+  [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override { return std::make_unique<Writer>(*this); }
+  [[nodiscard]] std::size_t capacity() override { return N;}
 };
 
 }
