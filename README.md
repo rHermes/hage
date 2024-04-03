@@ -114,3 +114,6 @@ if there are any logs available? This needs to be benchmarked.
   - What happens when the writer is done?
 - Should I implement some sort of tag system to the loggers that is passed to the sinks? Or should that be on the sinks?
 - Add some sort of integration towards co_routines, to allow a single logger thread to async read from multiple loggers.
+- Remove more template instantiation by making read operations on strings hit the same template.
+  - I already did this with the `SmartSerializer` setup, but we are going to need more than that.
+  - Maybe look into this when it becomes more of a problem.

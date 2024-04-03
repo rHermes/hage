@@ -26,6 +26,9 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     #    add_compile_options("-ftime-trace")
     #endif()
 
+    # add_compile_options("-fprofile-instr-generate" "-fcoverage-mapping")
+    # add_link_options("-fprofile-instr-generate" "-fcoverage-mapping")
+
     include(CTest)
 endif()
 
