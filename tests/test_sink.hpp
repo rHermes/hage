@@ -13,9 +13,9 @@ class TestSink final : public hage::Sink
 public:
   void receive(hage::LogLevel level, const timestamp_type& ts, std::string_view line) override;
 
-  [[nodiscard]] constexpr bool empty() const { return m_stored.empty(); }
-  [[nodiscard]] constexpr std::size_t size() const { return m_stored.size(); }
-  constexpr void clear() { return m_stored.clear(); }
+  [[nodiscard]] bool empty() const { return m_stored.empty(); }
+  [[nodiscard]] std::size_t size() const { return m_stored.size(); }
+  void clear() { return m_stored.clear(); }
 
   void require_line(const hage::LogLevel level, const std::string_view line)
   {

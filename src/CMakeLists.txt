@@ -34,7 +34,12 @@ target_link_libraries(hage_lib PRIVATE fmt::fmt)
 if (MSCV)
 else()
     target_compile_options(hage_lib PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(hage_lib PRIVATE -Wno-interference-size)
+
+    CHECK_CXX_COMPILER_FLAG("-Wno-interference-size" COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
+    if(COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
+        target_compile_options(hage_lib PRIVATE -Wno-interference-size)
+    endif()
+
     # target_compile_options(hage_lib PUBLIC -fsanitize=thread)
     # target_link_options(hage_lib PUBLIC -fsanitize=thread)
 endif()

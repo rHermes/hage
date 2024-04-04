@@ -6,6 +6,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(doctest)
 
+list(APPEND CMAKE_MODULE_PATH ${doctest_SOURCE_DIR}/scripts/cmake)
+
+
 add_executable(hage_test doctest.cpp
         logging_tests.cpp
         test_sink.cpp
@@ -14,10 +17,11 @@ add_executable(hage_test doctest.cpp
 if (MSCV)
 else()
     target_compile_options(hage_test PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(hage_test PRIVATE -Wno-interference-size)
 
-
-
+    CHECK_CXX_COMPILER_FLAG("-Wno-interference-size" COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
+    if(COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
+        target_compile_options(hage_test PRIVATE -Wno-interference-size)
+    endif()
 
     # target_compile_options(hage_test PRIVATE -fconcepts-diagnostics-depth=2)
 endif()
@@ -25,4 +29,8 @@ endif()
 target_compile_definitions(hage_test PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS)
 
 target_link_libraries(hage_test PRIVATE hage_lib doctest::doctest)
-add_test(NAME hage_test_test COMMAND hage_test)
+# add_test(NAME hage_test_test COMMAND hage_test)
+
+include(doctest)
+
+doctest_discover_tests(hage_test EXTRA_ARGS "-ni")

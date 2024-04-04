@@ -419,6 +419,52 @@ TEST_CASE("Test syncronized interface")
   }
 }
 
+TEST_CASE("MultiSink test")
+{
+  TestSink sink1;
+  TestSink sink2;
+  hage::MultiSink mSink{&sink1, &sink2};
+
+  hage::RingBuffer<4096> ringBuffer;
+  hage::Logger logger(&ringBuffer, &mSink);
+
+  logger.error("test 123");
+  logger.read_log();
+
+  sink1.require_error("test 123");
+  sink2.require_error("test 123");
+
+  REQUIRE_UNARY(sink1.empty());
+  REQUIRE_UNARY(sink2.empty());
+}
+
+TEST_CASE("FilterSink")
+{
+  TestSink testSink;
+  hage::FilterSink filterSink(&testSink, hage::LogLevel::Error);
+
+  hage::RingBuffer<4096> ringBuffer;
+  hage::Logger logger(&ringBuffer, &filterSink);
+
+  logger.set_min_log_level(hage::LogLevel::Trace);
+
+  logger.error("test 123");
+  logger.trace("not through");
+  logger.info("Not enough");
+  logger.critical("this will make it");
+  logger.read_log();
+  logger.read_log();
+  logger.read_log();
+  logger.read_log();
+
+  REQUIRE_UNARY_FALSE(logger.try_read_log());
+
+  testSink.require_error("test 123");
+  testSink.require_critical("this will make it");
+
+  REQUIRE_UNARY(testSink.empty());
+}
+
 TEST_CASE("testing syncronized logger")
 {
   using namespace hage::literals;
