@@ -47,7 +47,9 @@ class Logger
 {
 public:
   Logger(ByteBuffer* buffer, Sink* sink, const std::size_t maxMessageSize = 1000)
-    : m_buffer{buffer}, m_sink{ sink }, m_maxMessageSize(maxMessageSize)
+    : m_buffer{ buffer }
+    , m_sink{ sink }
+    , m_maxMessageSize(maxMessageSize)
   {
     if (buffer->capacity() < m_maxMessageSize)
       throw std::runtime_error("The buffer needs to be able to store at least one message");
@@ -56,8 +58,6 @@ public:
   }
 
   void set_min_log_level(const LogLevel level) { m_minLevel.store(level, std::memory_order::relaxed); }
-
-
 
   bool try_read_log() const
   {
@@ -211,7 +211,6 @@ public:
     return try_log(LogLevel::Debug, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
 
-
   template<auto S, typename... Args>
   bool try_info(FormatString<S>&& f, Args&&... args)
   {
@@ -223,7 +222,6 @@ public:
   {
     return try_log(LogLevel::Info, std::forward<decltype(fmt)>(fmt), std::forward<Args>(args)...);
   }
-
 
   template<auto S, typename... Args>
   bool try_warn(FormatString<S>&& f, Args&&... args)
@@ -273,7 +271,7 @@ private:
 
   // The max message size in bytes.
   std::size_t m_maxMessageSize;
-  std::size_t m_maxMessages{0};
+  std::size_t m_maxMessages{ 0 };
 
   template<typename... Args>
   void common_log(const LogLevel logLevel, Args&&... args)
@@ -326,7 +324,6 @@ private:
     };
 
     const auto writer = m_buffer->get_writer();
-
 
     bool good = write_to_buffer(*writer, trampoline);
     good = good && write_to_buffer(*writer, logLevel);

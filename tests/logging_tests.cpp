@@ -2,8 +2,9 @@
 #include <functional>
 #include <hage/logging.hpp>
 #include <hage/logging/console_sink.hpp>
-#include <hage/logging/queue_buffer.hpp>
+#include <hage/logging/list_buffer.hpp>
 #include <hage/logging/ring_buffer.hpp>
+#include <hage/logging/vector_buffer.hpp>
 
 #include "test_sink.hpp"
 
@@ -12,7 +13,7 @@
 
 using namespace hage::literals;
 
-TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage::QueueBuffer)
+TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage::ListBuffer, hage::VectorBuffer)
 {
   static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
   BufferType buff;
@@ -118,7 +119,11 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
   }
 }
 
-TEST_CASE_TEMPLATE("Single produser, single consumer buffers", BufferType, hage::RingBuffer<4096>, hage::QueueBuffer)
+TEST_CASE_TEMPLATE("Single produser, single consumer buffers",
+                   BufferType,
+                   hage::RingBuffer<4096>,
+                   hage::ListBuffer,
+                   hage::VectorBuffer)
 {
   static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
   BufferType buff;
@@ -350,7 +355,6 @@ TEST_CASE("Test syncronized interface")
     logger.debug("This is a debug message: {} {}"_fmt, 10, "Fun");
     REQUIRE_UNARY(sink.empty());
 
-
     logger.info("This is a debug message: {} {}", 10, "Fun");
     logger.info("This is a compile time debug message: {} {}"_fmt, 10, "Fan");
 
@@ -423,7 +427,7 @@ TEST_CASE("MultiSink test")
 {
   TestSink sink1;
   TestSink sink2;
-  hage::MultiSink mSink{&sink1, &sink2};
+  hage::MultiSink mSink{ &sink1, &sink2 };
 
   hage::RingBuffer<4096> ringBuffer;
   hage::Logger logger(&ringBuffer, &mSink);

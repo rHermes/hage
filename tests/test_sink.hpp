@@ -35,21 +35,19 @@ public:
   void require_critical(const std::string_view line) { require_line(hage::LogLevel::Critical, line); }
 
 private:
-
   struct Payload
-{
-  hage::LogLevel level;
-  timestamp_type ts;
-  std::string line;
-
-  Payload(const hage::LogLevel level, const timestamp_type ts, std::string line)
-    : level{ level }
-    , ts{ std::move(ts) }
-    , line{ std::move(line) }
   {
-  }
-};
+    hage::LogLevel level;
+    timestamp_type ts;
+    std::string line;
 
-std::deque<Payload> m_stored;
-}
-;
+    Payload(const hage::LogLevel level, const timestamp_type ts, std::string line)
+      : level{ level }
+      , ts{ std::move(ts) }
+      , line{ std::move(line) }
+    {
+    }
+  };
+
+  std::deque<Payload> m_stored;
+};

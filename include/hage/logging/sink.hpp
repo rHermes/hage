@@ -3,7 +3,6 @@
 #include <chrono>
 #include <vector>
 
-
 namespace hage {
 enum class LogLevel : std::int8_t
 {
@@ -70,7 +69,7 @@ public:
   }
 
   MultiSink(std::initializer_list<Sink*> sinks)
-  : m_sinks(std::move(sinks))
+    : m_sinks(std::move(sinks))
   {
   }
 

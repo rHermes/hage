@@ -14,8 +14,8 @@ add_executable(hage_test doctest.cpp
         test_sink.cpp
         test_sink.hpp)
 
-target_compile_features(hage_test PUBLIC cxx_std_20)
-set_target_properties(hage_test PROPERTIES CXX_EXTENSIONS OFF)
+#target_compile_features(hage_test PUBLIC cxx_std_20)
+# set_target_properties(hage_test PROPERTIES CXX_EXTENSIONS OFF)
 
 if (MSVC)
 else()

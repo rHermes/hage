@@ -38,7 +38,6 @@ template<typename T>
 using SmartSerializer =
   std::conditional_t<std::is_convertible_v<T, fmt::string_view>, Serializer<fmt::string_view>, Serializer<T>>;
 
-
 // These are convinience functions.
 template<typename T>
 bool
@@ -47,14 +46,12 @@ write_to_buffer(ByteBuffer::Writer& writer, T&& src)
   return SmartSerializer<T>::to_bytes(writer, std::forward<T>(src));
 }
 
-
 template<typename T>
 bool
 read_from_buffer(ByteBuffer::Reader& reader, typename SmartSerializer<T>::serialized_type& dst)
 {
   return SmartSerializer<T>::from_bytes(reader, dst);
 }
-
 
 template<typename T>
 typename SmartSerializer<T>::serialized_type

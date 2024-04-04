@@ -17,19 +17,19 @@ static constexpr std::size_t destructive_interference_size = 64;
 }
 
 template<typename... T>
-constexpr std::array<std::byte, sizeof...(T)> byte_array(T... a)
+constexpr std::array<std::byte, sizeof...(T)>
+byte_array(T... a)
 {
   return { static_cast<std::byte>(a)... };
 }
 
-
-template <typename R, typename V>
+template<typename R, typename V>
 concept RangeOf = std::ranges::range<R> && std::convertible_to<std::ranges::range_reference_t<R>, V>;
 
-template <typename R, typename V>
+template<typename R, typename V>
 concept InputRangeOf = std::ranges::input_range<R> && std::convertible_to<std::ranges::range_reference_t<R>, V>;
 
-template <typename R, typename V>
+template<typename R, typename V>
 concept CommonRangeOf = std::ranges::common_range<R> && std::convertible_to<std::ranges::range_reference_t<R>, V>;
 
 

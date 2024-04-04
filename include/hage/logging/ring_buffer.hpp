@@ -23,12 +23,11 @@ class RingBuffer final : public ByteBuffer
   alignas(details::constructive_interference_size) std::atomic_flag m_hasReader;
   alignas(details::constructive_interference_size) std::atomic_flag m_hasWriter;
 
-
   class Reader final : public ByteBuffer::Reader
   {
   public:
-
-    explicit Reader(RingBuffer& parent) : m_parent{parent}
+    explicit Reader(RingBuffer& parent)
+      : m_parent{ parent }
     {
       if (m_parent.m_hasReader.test_and_set(std::memory_order::acq_rel))
         throw std::runtime_error("We can only have one concurrent reader for RingBuffer");
@@ -36,10 +35,7 @@ class RingBuffer final : public ByteBuffer
       m_shadowHead = m_parent.m_head.load(std::memory_order::relaxed);
     }
 
-    ~Reader() override
-    {
-      m_parent.m_hasReader.clear(std::memory_order::release);
-    }
+    ~Reader() override { m_parent.m_hasReader.clear(std::memory_order::release); }
 
     bool read(std::span<std::byte> dst) override
     {
@@ -86,22 +82,19 @@ class RingBuffer final : public ByteBuffer
       m_parent.m_head.store(m_shadowHead, std::memory_order::release);
       return true;
     }
-    [[nodiscard]] std::size_t bytes_read() const override
-    {
-      return m_bytesRead;
-    }
+    [[nodiscard]] std::size_t bytes_read() const override { return m_bytesRead; }
 
   private:
     RingBuffer& m_parent;
-    std::ptrdiff_t m_shadowHead{0};
-    std::size_t m_bytesRead{0};
+    std::ptrdiff_t m_shadowHead{ 0 };
+    std::size_t m_bytesRead{ 0 };
   };
 
   class Writer final : public ByteBuffer::Writer
   {
   public:
-
-    explicit Writer(RingBuffer& parent) : m_parent{parent}
+    explicit Writer(RingBuffer& parent)
+      : m_parent{ parent }
     {
       if (m_parent.m_hasWriter.test_and_set(std::memory_order::acq_rel))
         throw std::runtime_error("We can only have one concurrent writer for RingBuffer");
@@ -109,10 +102,7 @@ class RingBuffer final : public ByteBuffer
       m_shadowTail = m_parent.m_tail.load(std::memory_order::relaxed);
     }
 
-    ~Writer() override
-    {
-      m_parent.m_hasWriter.clear(std::memory_order::release);
-    }
+    ~Writer() override { m_parent.m_hasWriter.clear(std::memory_order::release); }
 
     bool commit() override
     {
@@ -165,15 +155,12 @@ class RingBuffer final : public ByteBuffer
 
       return true;
     }
-    [[nodiscard]] std::size_t bytes_written() const override
-    {
-      return m_bytesWritten;
-    }
+    [[nodiscard]] std::size_t bytes_written() const override { return m_bytesWritten; }
 
   private:
     RingBuffer& m_parent;
-    std::ptrdiff_t m_shadowTail{0};
-    std::size_t m_bytesWritten{0};
+    std::ptrdiff_t m_shadowTail{ 0 };
+    std::size_t m_bytesWritten{ 0 };
   };
 
 public:
@@ -187,13 +174,10 @@ public:
   RingBuffer(RingBuffer&&) = delete;
   RingBuffer& operator=(RingBuffer&&) = delete;
 
-  [[nodiscard]] std::unique_ptr<ByteBuffer::Reader> get_reader() override
-  {
-    return std::make_unique<Reader>(*this);
-  }
+  [[nodiscard]] std::unique_ptr<ByteBuffer::Reader> get_reader() override { return std::make_unique<Reader>(*this); }
 
   [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override { return std::make_unique<Writer>(*this); }
-  [[nodiscard]] std::size_t capacity() override { return N;}
+  [[nodiscard]] std::size_t capacity() override { return N; }
 };
 
 }
