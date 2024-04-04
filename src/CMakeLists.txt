@@ -28,10 +28,10 @@ target_include_directories(hage_lib PUBLIC ../include)
 
 # Users of this library needs c++20
 target_compile_features(hage_lib PUBLIC cxx_std_20)
+set_target_properties(hage_lib PROPERTIES CXX_EXTENSIONS OFF)
+target_link_libraries(hage_lib PUBLIC fmt::fmt)
 
-target_link_libraries(hage_lib PRIVATE fmt::fmt)
-
-if (MSCV)
+if (MSVC)
 else()
     target_compile_options(hage_lib PRIVATE -Wall -Wextra -Wpedantic)
 

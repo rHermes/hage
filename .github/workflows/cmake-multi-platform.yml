@@ -47,6 +47,10 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - uses: mjp41/workaround8649@c8550b715ccdc17f89c8d5c28d7a48eeff9c94a8
+      with:
+        os: ${{ matrix.os }}
+
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
       id: strings
