@@ -17,9 +17,11 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
 
     CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-    if(COMPILER_SUPPORTS_MARCH_NATIVE)
+    if (COMPILER_SUPPORTS_MARCH_NATIVE)
         add_compile_options("-march=native")
-    endif()
+    endif ()
+
+    # add_compile_definitions("-D_GLIBCXX_DEBUG")
 
     #CHECK_CXX_COMPILER_FLAG("-ftime-trace" COMPILER_SUPPORTS_TIME_TRACE)
     #if(COMPILER_SUPPORTS_TIME_TRACE)
@@ -30,9 +32,7 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     # add_link_options("-fprofile-instr-generate" "-fcoverage-mapping")
 
     include(CTest)
-endif()
-
-
+endif ()
 
 
 include(FetchContent)

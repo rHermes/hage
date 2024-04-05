@@ -1,19 +1,23 @@
-#include <doctest/doctest.h>
+#include <filesystem>
 #include <functional>
-#include <hage/logging.hpp>
-#include <hage/logging/console_sink.hpp>
-#include <hage/logging/list_buffer.hpp>
-#include <hage/logging/ring_buffer.hpp>
-#include <hage/logging/vector_buffer.hpp>
-
-#include "test_sink.hpp"
-
 #include <latch>
 #include <thread>
 
+#include <hage/logging.hpp>
+#include <hage/logging/file_sink.hpp>
+#include <hage/logging/ring_buffer.hpp>
+#include <hage/logging/vector_buffer.hpp>
+
+#include <doctest/doctest.h>
+
+#include "test_sink.hpp"
+#include "test_utils.hpp"
+
 using namespace hage::literals;
 
-TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage::ListBuffer, hage::VectorBuffer)
+TEST_SUITE_BEGIN("logging");
+
+TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage::VectorBuffer)
 {
   static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
   BufferType buff;
@@ -21,7 +25,7 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
 
   SUBCASE("A buffer should start empty")
   {
-    auto reader = buffer.get_reader();
+    const auto reader = buffer.get_reader();
     std::array<std::byte, 1> testBuffer{};
     REQUIRE_UNARY_FALSE(reader->read(testBuffer));
     REQUIRE_UNARY(reader->commit());
@@ -29,14 +33,14 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
 
   SUBCASE("We should be able to read what is written, in the correct order")
   {
-    auto in = hage::byte_array(1, 2, 3);
-    auto writer = buffer.get_writer();
+    constexpr auto in = hage::byte_array(1, 2, 3);
+    const auto writer = buffer.get_writer();
 
     REQUIRE_UNARY(writer->write(in));
 
     SUBCASE("But not before commiting")
     {
-      auto reader = buffer.get_reader();
+      const auto reader = buffer.get_reader();
       std::array<std::byte, 3> out{};
       REQUIRE_UNARY_FALSE(reader->read(out));
     }
@@ -47,14 +51,14 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
     {
       // Without commit, we should be able to read again.
       for (int i = 0; i < 2; i++) {
-        auto reader = buffer.get_reader();
+        const auto reader = buffer.get_reader();
         std::array<std::byte, 3> out{};
         REQUIRE_UNARY(reader->read(out));
         REQUIRE_EQ(out, in);
       }
 
       {
-        auto reader = buffer.get_reader();
+        const auto reader = buffer.get_reader();
         std::array<std::byte, 3> out{};
         REQUIRE_UNARY(reader->read(out));
         REQUIRE_EQ(out, in);
@@ -63,7 +67,7 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
 
       SUBCASE("We cannot read once a read has been commited")
       {
-        auto reader = buffer.get_reader();
+        const auto reader = buffer.get_reader();
         std::array<std::byte, 3> out{};
         REQUIRE_UNARY_FALSE(reader->read(out));
       }
@@ -75,7 +79,7 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
 
     SUBCASE("We should be able to read multiple times, without commit")
     {
-      auto reader = buffer.get_reader();
+      const auto reader = buffer.get_reader();
       std::array<std::byte, 3> out{};
       REQUIRE_UNARY(reader->read(out));
       REQUIRE_EQ(out, in);
@@ -87,7 +91,7 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
 
     SUBCASE("We should be able to read multiple times, commit")
     {
-      auto reader = buffer.get_reader();
+      const auto reader = buffer.get_reader();
       std::array<std::byte, 3> out{};
       REQUIRE_UNARY(reader->commit());
 
@@ -107,23 +111,19 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
   SUBCASE("A writer without commit should not happen")
   {
     {
-      auto in = hage::byte_array(1, 2, 3);
-      auto writer = buffer.get_writer();
+      constexpr auto in = hage::byte_array(1, 2, 3);
+      const auto writer = buffer.get_writer();
 
       REQUIRE_UNARY(writer->write(in));
     }
 
-    auto reader = buffer.get_reader();
+    const auto reader = buffer.get_reader();
     std::array<std::byte, 1> out{};
     REQUIRE_UNARY_FALSE(reader->read(out));
   }
 }
 
-TEST_CASE_TEMPLATE("Single produser, single consumer buffers",
-                   BufferType,
-                   hage::RingBuffer<4096>,
-                   hage::ListBuffer,
-                   hage::VectorBuffer)
+TEST_CASE_TEMPLATE("Single produser, single consumer buffers", BufferType, hage::RingBuffer<4096>, hage::VectorBuffer)
 {
   static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
   BufferType buff;
@@ -150,7 +150,7 @@ TEST_CASE("RingBuffer")
   // We have some unique tests here, like being able to write a 100 zeros.
   SUBCASE("Writing larger than buffer size, should fail")
   {
-    auto writer = buffer.get_writer();
+    const auto writer = buffer.get_writer();
     std::array<std::byte, N + 1> in{};
     CHECK_UNARY_FALSE(writer->write(in));
   }
@@ -158,7 +158,7 @@ TEST_CASE("RingBuffer")
   // We have some unique tests here, like being able to write a 100 zeros.
   SUBCASE("Reading larger than buffer size, should fail")
   {
-    auto reader = buffer.get_reader();
+    const auto reader = buffer.get_reader();
     std::array<std::byte, N + 1> out{};
     CHECK_UNARY_FALSE(reader->read(out));
   }
@@ -166,10 +166,10 @@ TEST_CASE("RingBuffer")
   // We are going to check that the writes fail across the style
   SUBCASE("Writign and reading should not work for all positions in the buffer")
   {
-    auto writer = buffer.get_writer();
-    auto reader = buffer.get_reader();
+    const auto writer = buffer.get_writer();
+    const auto reader = buffer.get_reader();
     for (std::size_t i = 0; i < N + 3; i++) {
-      std::array<std::byte, N + 1> in = hage::byte_array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+      constexpr std::array<std::byte, N + 1> in = hage::byte_array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
       CHECK_UNARY_FALSE(writer->write(in));
 
       std::array<std::byte, N + 1> out{};
@@ -187,10 +187,10 @@ TEST_CASE("RingBuffer")
   // We are going to check that the writes fail across the style
   SUBCASE("Writing and reading should work for all positions in the buffer")
   {
-    auto writer = buffer.get_writer();
-    auto reader = buffer.get_reader();
+    const auto writer = buffer.get_writer();
+    const auto reader = buffer.get_reader();
     for (std::size_t i = 0; i < N + 3; i++) {
-      std::array<std::byte, N> in = hage::byte_array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+      constexpr std::array<std::byte, N> in = hage::byte_array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
       CHECK_UNARY(writer->write(in));
       CHECK_UNARY(writer->commit());
 
@@ -252,7 +252,7 @@ TEST_CASE("allow logger to set max message size")
 
 TEST_CASE("test async interface")
 {
-  TestSink sink;
+  hage::test::TestSink sink;
   hage::RingBuffer<4096> ringBuffer;
   hage::Logger logger(&ringBuffer, &sink);
 
@@ -344,9 +344,9 @@ TEST_CASE("test async interface")
 
 TEST_CASE("Test syncronized interface")
 {
-  TestSink sink;
+  hage::test::TestSink sink;
   hage::RingBuffer<4096> ringBuffer;
-  hage::Logger logger(&ringBuffer, &sink);
+  hage::Logger logger(&ringBuffer, &sink, 100);
 
   // TODO(rHermes): Figure out how to test that
   SUBCASE("Logger should default to info log level")
@@ -425,8 +425,8 @@ TEST_CASE("Test syncronized interface")
 
 TEST_CASE("MultiSink test")
 {
-  TestSink sink1;
-  TestSink sink2;
+  hage::test::TestSink sink1;
+  hage::test::TestSink sink2;
   hage::MultiSink mSink{ &sink1, &sink2 };
 
   hage::RingBuffer<4096> ringBuffer;
@@ -444,7 +444,7 @@ TEST_CASE("MultiSink test")
 
 TEST_CASE("FilterSink")
 {
-  TestSink testSink;
+  hage::test::TestSink testSink;
   hage::FilterSink filterSink(&testSink, hage::LogLevel::Error);
 
   hage::RingBuffer<4096> ringBuffer;
@@ -469,18 +469,34 @@ TEST_CASE("FilterSink")
   REQUIRE_UNARY(testSink.empty());
 }
 
+TEST_CASE("File sink")
+{
+  const hage::test::ScopedTempFile tempFile("file_sink_test.{}.txt");
+
+  hage::FileSink fs(tempFile.path);
+  hage::RingBuffer<4096> ringBuffer;
+  hage::Logger logger(&ringBuffer, &fs);
+
+  logger.info("Hello there!: {}", 10);
+  logger.read_log();
+
+  // Windows has two digits fewer in it's clock than linux.
+  REQUIRE_GE(fs.bytes_written(), 62);
+  REQUIRE_LE(fs.bytes_written(), 64);
+}
+
 TEST_CASE("testing syncronized logger")
 {
   using namespace hage::literals;
 
-  hage::ConsoleSink consoleSink;
+  hage::test::TestSink testSink;
   hage::RingBuffer<4096> ringBuffer;
-  hage::Logger logger(&ringBuffer, &consoleSink);
+  hage::Logger logger(&ringBuffer, &testSink);
   std::latch ready(2);
 
   logger.set_min_log_level(hage::LogLevel::Debug);
 
-  constexpr std::int64_t TIMES = 2;
+  constexpr std::int64_t TIMES = 1000;
 
   std::thread writer([&logger, &ready]() {
     ready.arrive_and_wait();
@@ -503,18 +519,24 @@ TEST_CASE("testing syncronized logger")
 
   writer.join();
   reader.join();
+
+  for (std::int64_t i = 0; i < TIMES; i++) {
+    testSink.require_debug(fmt::format("Here we are: {} and my name is: hermes", i));
+  }
+
+  REQUIRE_UNARY(testSink.empty());
 }
 
 TEST_CASE("testing syncronized logger, compile_time passing")
 {
   using namespace hage::literals;
 
-  hage::ConsoleSink consoleSink;
+  hage::test::TestSink testSink;
   hage::RingBuffer<4096> ringBuffer;
-  hage::Logger logger(&ringBuffer, &consoleSink);
+  hage::Logger logger(&ringBuffer, &testSink);
   std::latch ready(2);
 
-  constexpr std::int64_t TIMES = 2;
+  constexpr std::int64_t TIMES = 1000;
 
   std::thread writer([&logger, &ready]() {
     ready.arrive_and_wait();
@@ -537,4 +559,12 @@ TEST_CASE("testing syncronized logger, compile_time passing")
 
   writer.join();
   reader.join();
+
+  for (std::int64_t i = 0; i < TIMES; i++) {
+    testSink.require_error(fmt::format("Here we are: {} and my name is: hermes", i));
+  }
+
+  REQUIRE_UNARY(testSink.empty());
 }
+
+TEST_SUITE_END();

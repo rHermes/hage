@@ -279,7 +279,7 @@ private:
     if (logLevel < m_minLevel.load(std::memory_order::relaxed))
       return;
 
-    m_available.wait(m_maxMessageSize, std::memory_order::acquire);
+    m_available.wait(m_maxMessages, std::memory_order::acquire);
 
     if (!internal_try_log(logLevel, std::forward<Args>(args)...))
       throw std::runtime_error("We were unable to write to the log, this should never happen");

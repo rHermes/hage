@@ -29,6 +29,7 @@ the features:
 - Allows for user implemented buffer types
 - Allows for user implemented logger sinks
 - Good test suite (Always improving!)
+- Provides ready made composable sink types.
 
 Here is an example showcasing its use, with two threads. Notice that they are using the synchronous APIs, there are also
 non-blocking version of both of these, by appending the `try_` prefix to the functions.
@@ -48,7 +49,7 @@ int main()
   constexpr std::int64_t TIMES = 10;
   std::thread writer([&logger]() {
     for (std::int64_t i = 0; i < TIMES; i++)
-      logger.log("Here we are: i={} and my name is: {}", i, "james");
+      logger.info("Here we are: i={} and my name is: {}", i, "james");
   });
 
   std::thread reader([&logger]() {
@@ -83,11 +84,11 @@ type called `format_string`. When instantiated like this, the format goes from a
 can pass it into the lambda. There are two ways to use this version:
 
 ```c++
-logger.log(hage::format_string<"Hello there {}">(), 23);
+logger.info(hage::format_string<"Hello there {}">(), 23);
 
 // Or using our literals
 using namespace hage::literals;
-logger.log("Hello there {}"_fmt, 23);
+logger.info("Hello there {}"_fmt, 23);
 ```
 
 I've decided to get the time in the hot thread, but this can easily be changed to put it into the logger thread. 
@@ -111,8 +112,6 @@ In the future I'm going to rip that out and instead use exceptions if we cannot 
 - Add some sort of mode where we can `try_to_write`, and `always_read` which doesn't attempt to read, but merely sees
 if there are any logs available? This needs to be benchmarked.
 - Add macros for logging, that gets removed at compile time, if we define away the log level
-- Create chain sink
-- Create file sink
 - Create rotating file sink
 - Create more serializers for standard library.
 - Think about how this will integrate towards a stop source.

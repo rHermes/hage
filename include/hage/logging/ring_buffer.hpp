@@ -5,9 +5,16 @@
 
 #include <span>
 
+
 namespace hage {
 // This is a rather dumb container, but it will work for most
 // of our tests.
+
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4324) // aligntment warning.
+#endif
+
 template<std::ptrdiff_t N>
 class RingBuffer final : public ByteBuffer
 {
@@ -179,5 +186,8 @@ public:
   [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override { return std::make_unique<Writer>(*this); }
   [[nodiscard]] std::size_t capacity() override { return N; }
 };
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 }

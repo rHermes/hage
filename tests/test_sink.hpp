@@ -8,6 +8,8 @@
 /**
  * A simple test sink, used in the logging tests.
  */
+
+namespace hage::test {
 class TestSink final : public hage::Sink
 {
 public:
@@ -43,11 +45,12 @@ private:
 
     Payload(const hage::LogLevel level, const timestamp_type ts, std::string line)
       : level{ level }
-      , ts{ std::move(ts) }
-      , line{ std::move(line) }
+    , ts{ std::move(ts) }
+    , line{ std::move(line) }
     {
     }
   };
 
   std::deque<Payload> m_stored;
 };
+}

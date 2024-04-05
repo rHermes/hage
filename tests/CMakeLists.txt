@@ -12,12 +12,15 @@ list(APPEND CMAKE_MODULE_PATH ${doctest_SOURCE_DIR}/scripts/cmake)
 add_executable(hage_test doctest.cpp
         logging_tests.cpp
         test_sink.cpp
-        test_sink.hpp)
+        test_sink.hpp
+        test_utils.hpp
+        test_utils.cpp)
 
 #target_compile_features(hage_test PUBLIC cxx_std_20)
 # set_target_properties(hage_test PROPERTIES CXX_EXTENSIONS OFF)
 
 if (MSVC)
+    target_compile_options(hage_test PRIVATE /W4 /utf-8 /permissive- /Zc:__cplusplus )
 else()
     target_compile_options(hage_test PRIVATE -Wall -Wextra -Wpedantic)
 

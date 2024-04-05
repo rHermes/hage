@@ -12,17 +12,18 @@ set(HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/misc.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/ring_buffer.hpp"
-        "${hage_SOURCE_DIR}/include/hage/logging/list_buffer.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/vector_buffer.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/byte_buffer.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/logger.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/serializers.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/sink.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/file_sink.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/console_sink.hpp"
 )
 
 add_library(hage_lib ${HEADER_LIST}
-        logging/console_sink.cpp)
+        logging/console_sink.cpp
+        logging/file_sink.cpp)
 
 # We need this directory, and users of our library will need it to.
 target_include_directories(hage_lib PUBLIC ../include)
@@ -33,6 +34,7 @@ set_target_properties(hage_lib PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(hage_lib PUBLIC fmt::fmt)
 
 if (MSVC)
+    target_compile_options(hage_lib PRIVATE /W4 /utf-8 /permissive- /Zc:__cplusplus )
 else()
     target_compile_options(hage_lib PRIVATE -Wall -Wextra -Wpedantic)
 
