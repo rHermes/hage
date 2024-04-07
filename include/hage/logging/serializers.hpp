@@ -34,6 +34,8 @@ singular_writable_bytes(T& t)
 template<typename T, typename = void>
 struct Serializer;
 
+
+// This is a constrcut that is used to limit the amount of template expansions that happen
 template<typename T>
 using SmartSerializer =
   std::conditional_t<std::is_convertible_v<T, fmt::string_view>, Serializer<fmt::string_view>, Serializer<T>>;

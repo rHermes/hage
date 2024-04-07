@@ -18,7 +18,7 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
     CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
     if (COMPILER_SUPPORTS_MARCH_NATIVE)
-        add_compile_options("-march=native")
+        # add_compile_options("-march=native")
     endif ()
 
     # add_compile_definitions("-D_GLIBCXX_DEBUG")
@@ -39,3 +39,6 @@ include(FetchContent)
 
 add_subdirectory(src)
 add_subdirectory(tests)
+add_subdirectory(examples)
+
+enable_testing()

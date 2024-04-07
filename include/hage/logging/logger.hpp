@@ -2,9 +2,10 @@
 
 #include "byte_buffer.hpp"
 
-#include <atomic>
+#include <hage/atomic/atomic.hpp>
 #include <fmt/compile.h>
 #include <fmt/core.h>
+#include <semaphore>
 
 #include "serializers.hpp"
 #include "sink.hpp"
@@ -50,39 +51,62 @@ public:
     : m_buffer{ buffer }
     , m_sink{ sink }
     , m_maxMessageSize(maxMessageSize)
+  , m_capacity(buffer->capacity())
   {
-    if (buffer->capacity() < m_maxMessageSize)
+    if (m_capacity < m_maxMessageSize)
       throw std::runtime_error("The buffer needs to be able to store at least one message");
 
-    m_maxMessages = buffer->capacity() / m_maxMessageSize;
+    // m_maxMessages = buffer->capacity() / m_maxMessageSize;
+    m_bytesAvailible.store(m_capacity);
   }
 
   void set_min_log_level(const LogLevel level) { m_minLevel.store(level, std::memory_order::relaxed); }
 
-  bool try_read_log() const
+  bool try_read_log()
   {
-    const auto reader = m_buffer->get_reader();
-    logging_function f{ nullptr };
-    auto good = read_from_buffer<logging_function>(*reader, f);
-    good = good && f(*reader, *m_sink);
+    if (m_bytesAvailible.load(std::memory_order::acquire) == m_capacity)
+      return false;
 
-    if (good)
-      return reader->commit();
 
-    return false;
+    const auto bytesRead = internal_read_log();
+
+    m_bytesAvailible.fetch_add(bytesRead, std::memory_order::release);
+    m_bytesAvailible.notify_one();
+    return true;
   }
 
   // This can only be used with the log function pair, otherwise
   // this thread will never be woken up again.
   void read_log()
   {
-    m_available.wait(0, std::memory_order::acquire);
+    // We know we are the only reader, so we are just going to wait until we can claim some bytes.
+    m_bytesAvailible.wait(m_capacity, std::memory_order::acquire);
 
-    if (!try_read_log())
+    const auto bytesRead = internal_read_log();
+    if (bytesRead == 0)
       throw std::runtime_error("We were unable to read from read_log, this should never happen");
 
-    m_available.fetch_sub(1, std::memory_order::release);
-    m_available.notify_one();
+    // we remove the bytes from the ring buffer.
+    m_bytesAvailible.fetch_add(bytesRead, std::memory_order::release);
+    m_bytesAvailible.notify_one();
+  }
+
+  template <typename Rep, typename Period>
+  bool read_log(const std::chrono::duration<Rep, Period>& timeout)
+  {
+
+    if (!m_bytesAvailible.wait_for(m_capacity, timeout, std::memory_order::acquire))
+      return false;
+
+    const auto bytesRead = internal_read_log();
+    if (bytesRead == 0)
+      throw std::runtime_error("We were unable to read from read_log, this should never happen");
+
+    // we remove the bytes from the ring buffer.
+    m_bytesAvailible.fetch_add(bytesRead, std::memory_order::release);
+    m_bytesAvailible.notify_one();
+
+    return true;
   }
 
   // Synchronus code
@@ -267,11 +291,31 @@ private:
   ByteBuffer* m_buffer{};
   Sink* m_sink;
 
-  std::atomic_unsigned_lock_free m_available{ 0 };
+
 
   // The max message size in bytes.
   std::size_t m_maxMessageSize;
-  std::size_t m_maxMessages{ 0 };
+  std::size_t m_capacity;
+
+  static_assert(std::atomic<std::size_t>::is_always_lock_free);
+  hage::atomic<std::size_t> m_bytesAvailible{ 0 };
+
+  // This reads the log and returns how many bytes we read in total.
+  [[nodiscard]] std::size_t internal_read_log()
+  {
+    const auto reader = m_buffer->get_reader();
+    logging_function f{ nullptr };
+    auto good = read_from_buffer<logging_function>(*reader, f);
+    good = good && f(*reader, *m_sink);
+
+    // we try to commit.
+    good = good && reader->commit();
+
+    if (good)
+      return reader->bytes_read();
+    else
+      return 0;
+  }
 
   template<typename... Args>
   void common_log(const LogLevel logLevel, Args&&... args)
@@ -279,13 +323,13 @@ private:
     if (logLevel < m_minLevel.load(std::memory_order::relaxed))
       return;
 
-    m_available.wait(m_maxMessages, std::memory_order::acquire);
+
+    m_bytesAvailible.wait_with_predicate([this](const std::size_t v) {
+      return m_maxMessageSize <= v;
+    });
 
     if (!internal_try_log(logLevel, std::forward<Args>(args)...))
       throw std::runtime_error("We were unable to write to the log, this should never happen");
-
-    m_available.fetch_add(1, std::memory_order::release);
-    m_available.notify_one();
   }
 
   template<typename... Args>
@@ -308,7 +352,7 @@ private:
       // not using an optional because your interface effectively requires default constructibility anyway
       std::tuple<typename SmartSerializer<Args>::serialized_type...> results;
 
-      bool success = [&results, &reader]<std::size_t... Is>(std::index_sequence<Is...>) {
+      const bool success = [&results, &reader]<std::size_t... Is>(std::index_sequence<Is...>) {
         return (... and read_from_buffer<Args>(reader, std::get<Is>(results)));
       }(std::index_sequence_for<Args...>{});
 
@@ -332,10 +376,13 @@ private:
     if (m_maxMessageSize < writer->bytes_written())
       return false;
 
-    if (good)
-      return writer->commit();
-    else
+    good = good && writer->commit();
+    if (!good)
       return false;
+
+    m_bytesAvailible.fetch_sub(writer->bytes_written(), std::memory_order::acq_rel);
+    m_bytesAvailible.notify_one();
+    return true;
   }
 
   template<typename... Args>
@@ -355,7 +402,7 @@ private:
 
       // not using an optional because your interface effectively requires default constructibility anyway
       std::tuple<typename SmartSerializer<Args>::serialized_type...> results;
-      bool success = [&results, &reader]<std::size_t... Is>(std::index_sequence<Is...>) {
+      const bool success = [&results, &reader]<std::size_t... Is>(std::index_sequence<Is...>) {
         return (... and read_from_buffer<Args>(reader, std::get<Is>(results)));
       }(std::index_sequence_for<Args...>{});
 
@@ -381,10 +428,13 @@ private:
     if (m_maxMessageSize < writer->bytes_written())
       return false;
 
-    if (good)
-      return writer->commit();
+    good = good && writer->commit();
+    if (!good)
+      return false;
 
-    return false;
+    m_bytesAvailible.fetch_sub(writer->bytes_written(), std::memory_order::acq_rel);
+    m_bytesAvailible.notify_one();
+    return true;
   }
 };
 }

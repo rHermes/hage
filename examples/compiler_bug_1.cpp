@@ -1,34 +1,66 @@
-#pragma once
 
-#include "../misc.hpp"
-#include "byte_buffer.hpp"
-
+#include <array>
+#include <atomic>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <iostream>
+#include <latch>
+#include <memory>
 #include <span>
+#include <thread>
 
+template<typename... T>
+constexpr std::array<std::byte, sizeof...(T)>
+byte_array(T... a)
+{
+  return { static_cast<std::byte>(a)... };
+}
 
-namespace hage {
-// This is a rather dumb container, but it will work for most
-// of our tests.
+class ByteBuffer
+{
+public:
+  virtual ~ByteBuffer() = default;
 
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4324) // aligntment warning.
-#endif
+  class Reader
+  {
+  public:
+    virtual ~Reader() = default;
+    virtual bool read(std::span<std::byte> dst) = 0;
+    virtual bool commit() = 0;
+    [[nodiscard]] virtual std::size_t bytes_read() const = 0;
+  };
+
+  [[nodiscard]] virtual std::unique_ptr<Reader> get_reader() = 0;
+
+  class Writer
+  {
+  public:
+    virtual ~Writer() = default;
+    virtual bool write(std::span<const std::byte> src) = 0;
+    virtual bool commit() = 0;
+    [[nodiscard]] virtual std::size_t bytes_written() const = 0;
+  };
+
+  [[nodiscard]] virtual std::unique_ptr<Writer> get_writer() = 0;
+
+  [[nodiscard]] virtual std::size_t capacity() = 0;
+};
 
 template<std::ptrdiff_t N>
 class RingBuffer final : public ByteBuffer
 {
 
-  alignas(details::destructive_interference_size) std::atomic<std::ptrdiff_t> m_head{ 0 };
-  alignas(details::destructive_interference_size) std::ptrdiff_t m_cachedHead{ 0 };
+  alignas(64) std::atomic<std::ptrdiff_t> m_head{ 0 };
+  alignas(64) std::ptrdiff_t m_cachedHead{ 0 };
 
-  alignas(details::destructive_interference_size) std::atomic<std::ptrdiff_t> m_tail{ 0 };
-  alignas(details::destructive_interference_size) std::ptrdiff_t m_cachedTail{ 0 };
+  alignas(64) std::atomic<std::ptrdiff_t> m_tail{ 0 };
+  alignas(64) std::ptrdiff_t m_cachedTail{ 0 };
 
-  alignas(details::destructive_interference_size) std::array<std::byte, N + 1> m_buff{};
+  alignas(64) std::array<std::byte, N + 1> m_buff{};
 
-  alignas(details::destructive_interference_size) std::atomic_flag m_hasReader;
-  alignas(details::destructive_interference_size) std::atomic_flag m_hasWriter;
+  alignas(64) std::atomic_flag m_hasReader;
+  alignas(64) std::atomic_flag m_hasWriter;
 
   class Reader final : public ByteBuffer::Reader
   {
@@ -204,8 +236,79 @@ public:
   }
   [[nodiscard]] std::size_t capacity() override { return N; }
 };
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
 
+
+
+void test1()
+{
+
+    RingBuffer<4096> ringBuffer;
+    std::latch ready(2);
+
+    // constexpr std::int64_t TIMES = 1;
+    constexpr std::int64_t TIMES = 100;
+
+    static constexpr auto goodBytes = byte_array(1, 2, 3, 4, 5, 6, 7, 8);
+
+    std::thread writer([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+
+      std::int64_t i = 0;
+
+      while (i < TIMES) {
+        const auto writer = ringBuffer.get_writer();
+        if (!writer->write(goodBytes))
+          continue;
+
+
+        const auto lel = writer->commit();
+        assert(lel);
+        i++;
+      }
+    });
+
+    std::thread reader([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+      std::int64_t i = 0;
+
+      while (i < TIMES) {
+        const auto reader = ringBuffer.get_reader();
+        std::remove_cv_t<decltype(goodBytes)> srcBuf{};
+        if (!reader->read(srcBuf))
+          continue;
+
+        // CAPTURE(&srcBuf);
+
+        const auto good = reader->commit();
+        assert(good);
+
+        if (srcBuf != goodBytes) {
+          assert(false);
+        }
+        i++;
+      }
+    });
+
+    writer.join();
+    reader.join();
+}
+
+int main() {
+  test1();
+
+  /*
+  volatile bool fun = (uintptr_t)(&buffer) % 64 != 0;
+  volatile uintptr_t wow = (uintptr_t)(&buffer);
+
+  const auto woww = alignof(std::max_align_t);
+
+  {
+    const auto reader = buffer.get_reader();
+    std::array<std::byte, 1> testBuffer{};
+    assert(!reader->read(testBuffer));
+    assert(reader->commit());
+  }
+  */
+
+  return 0;
 }

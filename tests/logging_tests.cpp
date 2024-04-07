@@ -2,6 +2,7 @@
 #include <functional>
 #include <latch>
 #include <thread>
+#include <chrono>
 
 #include <hage/logging.hpp>
 #include <hage/logging/file_sink.hpp>
@@ -12,15 +13,153 @@
 
 #include "test_sink.hpp"
 #include "test_utils.hpp"
+#include <bitset>
 
 using namespace hage::literals;
 
+template <std::size_t N>
+std::ostream& operator<< (std::ostream& os, const std::array<std::byte, N>& value) {
+  for (std::size_t i = 0; i < N-1; i++) {
+    os << value[i] << " ";
+  }
+  os << value[N-1];
+  return os;
+}
+
+namespace doctest {
+template <std::size_t N>
+struct StringMaker<std::array<std::byte, N>> {
+  static String convert(const std::array<std::byte, N>& value) {
+    std::stringstream buf;
+    for (std::size_t i = 0; i < N-1; i++) {
+      // buf << std::bitset<8>(std::to_integer<int>(value[i])) << " ";
+      buf << std::to_integer<int>(value[i]) << " ";
+    }
+    // buf << std::bitset<8>(std::to_integer<int>(value[N-1]));
+    buf << std::to_integer<int>(value[N-1]);
+    return buf.str().c_str();
+  }
+};
+}
 TEST_SUITE_BEGIN("logging");
 
+
+TEST_CASE("Small test")
+{
+  hage::RingBuffer<4096> buffer{};
+
+  volatile bool fun = (uintptr_t)(&buffer) % 64 != 0;
+  volatile uintptr_t wow = (uintptr_t)(&buffer);
+
+  const auto woww = alignof(std::max_align_t);
+
+  SUBCASE("A buffer should start empty")
+  {
+    const auto reader = buffer.get_reader();
+    std::array<std::byte, 1> testBuffer{};
+    REQUIRE_UNARY_FALSE(reader->read(testBuffer));
+    REQUIRE_UNARY(reader->commit());
+  }
+/*
+  SUBCASE("We should be able to read what is written, in the correct order")
+  {
+    constexpr auto in = hage::byte_array(1, 2, 3);
+    const auto writer = buffer.get_writer();
+
+    REQUIRE_UNARY(writer->write(in));
+
+    SUBCASE("But not before commiting")
+    {
+      const auto reader = buffer.get_reader();
+      std::array<std::byte, 3> out{};
+      REQUIRE_UNARY_FALSE(reader->read(out));
+    }
+
+    REQUIRE_UNARY(writer->commit());
+
+    SUBCASE("We can read after writer commit")
+    {
+      // Without commit, we should be able to read again.
+      for (int i = 0; i < 2; i++) {
+        const auto reader = buffer.get_reader();
+        std::array<std::byte, 3> out{};
+        REQUIRE_UNARY(reader->read(out));
+        REQUIRE_EQ(out, in);
+      }
+
+      {
+        const auto reader = buffer.get_reader();
+        std::array<std::byte, 3> out{};
+        REQUIRE_UNARY(reader->read(out));
+        REQUIRE_EQ(out, in);
+        REQUIRE_UNARY(reader->commit());
+      }
+
+      SUBCASE("We cannot read once a read has been commited")
+      {
+        const auto reader = buffer.get_reader();
+        std::array<std::byte, 3> out{};
+        REQUIRE_UNARY_FALSE(reader->read(out));
+      }
+    }
+
+    // We should be able to write even after commit.
+    REQUIRE_UNARY(writer->write(in));
+    REQUIRE_UNARY(writer->commit());
+
+    SUBCASE("We should be able to read multiple times, without commit")
+    {
+      const auto reader = buffer.get_reader();
+      std::array<std::byte, 3> out{};
+      REQUIRE_UNARY(reader->read(out));
+      REQUIRE_EQ(out, in);
+      REQUIRE_UNARY(reader->read(out));
+      REQUIRE_EQ(out, in);
+      REQUIRE_UNARY(reader->commit());
+      REQUIRE_UNARY_FALSE(reader->read(out));
+    }
+
+    SUBCASE("We should be able to read multiple times, commit")
+    {
+      const auto reader = buffer.get_reader();
+      std::array<std::byte, 3> out{};
+      REQUIRE_UNARY(reader->commit());
+
+      REQUIRE_UNARY(reader->read(out));
+      REQUIRE_EQ(out, in);
+
+      REQUIRE_UNARY(reader->commit());
+
+      REQUIRE_UNARY(reader->read(out));
+      REQUIRE_EQ(out, in);
+
+      REQUIRE_UNARY(reader->commit());
+      REQUIRE_UNARY_FALSE(reader->read(out));
+    }
+  }
+
+  SUBCASE("A writer without commit should not happen")
+  {
+    {
+      constexpr auto in = hage::byte_array(1, 2, 3);
+      const auto writer = buffer.get_writer();
+
+      REQUIRE_UNARY(writer->write(in));
+    }
+
+    const auto reader = buffer.get_reader();
+    std::array<std::byte, 1> out{};
+    REQUIRE_UNARY_FALSE(reader->read(out));
+  }
+*/
+
+}
+
+#ifndef WOWOWW
 TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage::VectorBuffer)
 {
   static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
-  BufferType buff;
+  BufferType buff{};
   hage::ByteBuffer& buffer = buff;
 
   SUBCASE("A buffer should start empty")
@@ -120,6 +259,165 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<4096>, hage:
     const auto reader = buffer.get_reader();
     std::array<std::byte, 1> out{};
     REQUIRE_UNARY_FALSE(reader->read(out));
+  }
+
+
+  // Ok, we will now create one reader thread and one writer thread. We will
+  SUBCASE("Reader and writer threads should work")
+  {
+    BufferType ringBuffer;
+    std::latch ready(2);
+
+    constexpr std::int64_t TIMES = 10000;
+
+    static constexpr auto goodBytes = hage::byte_array(1, 2, 3, 4, 5, 6, 7, 8);
+
+    std::thread writer([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+      // std::string str("I hope this works!");
+      std::int64_t i = 0;
+      while (i < TIMES) {
+        const auto writer = ringBuffer.get_writer();
+        if (!writer->write(goodBytes))
+          continue;
+
+        REQUIRE_UNARY(writer->commit());
+        i++;
+      }
+    });
+
+    std::thread reader([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+      std::int64_t i = 0;
+      while (i < TIMES) {
+        std::remove_cv_t<decltype(goodBytes)> srcBuf{};
+        const auto reader = ringBuffer.get_reader();
+        if (!reader->read(srcBuf))
+          continue;
+
+        REQUIRE_UNARY(reader->commit());
+        REQUIRE_EQ(srcBuf, goodBytes);
+        i++;
+      }
+    });
+
+    writer.join();
+    reader.join();
+  }
+
+}
+
+TEST_CASE_TEMPLATE("ByteBuffer tests2", BufferType, hage::RingBuffer<4096>, hage::VectorBuffer)
+{
+  static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
+
+  // Ok, we will now create one reader thread and one writer thread. We will
+  SUBCASE("Reader and writer threads should work")
+  {
+    BufferType ringBuffer;
+    std::latch ready(2);
+
+    constexpr std::int64_t TIMES = 10000000;
+
+    static constexpr auto goodBytes = hage::byte_array(1, 2, 3, 4, 5, 6, 7, 8);
+
+    std::thread writer([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+      // std::string str("I hope this works!");
+      std::int64_t i = 0;
+      while (i < TIMES) {
+        const auto writer = ringBuffer.get_writer();
+        if (!writer->write(goodBytes))
+          continue;
+
+        REQUIRE_UNARY(writer->commit());
+        i++;
+      }
+    });
+
+    std::thread reader([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+      std::int64_t i = 0;
+      while (i < TIMES) {
+        std::remove_cv_t<decltype(goodBytes)> srcBuf{};
+        const auto reader = ringBuffer.get_reader();
+        if (!reader->read(srcBuf))
+          continue;
+
+        REQUIRE_UNARY(reader->commit());
+
+        if (srcBuf != goodBytes) {
+          CAPTURE(srcBuf);
+          REQUIRE_EQ(srcBuf, goodBytes);
+        }
+        i++;
+      }
+    });
+
+    writer.join();
+    reader.join();
+  }
+}
+
+TEST_CASE_TEMPLATE("ByteBuffer tests3", BufferType, hage::RingBuffer<4096>)
+{
+  static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
+
+  // Ok, we will now create one reader thread and one writer thread. We will
+  SUBCASE("Reader and writer threads should work")
+  {
+    BufferType ringBuffer;
+    std::latch ready(2);
+
+    // constexpr std::int64_t TIMES = 1;
+    constexpr std::int64_t TIMES = 10000000;
+
+    static constexpr auto goodBytes = hage::byte_array(1, 2, 3, 4, 5, 6, 7, 8);
+
+    std::thread writer([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+      // std::string str("I hope this works!");
+      std::int64_t i = 0;
+
+      while (i < TIMES) {
+        const auto writer = ringBuffer.get_writer();
+        if (!writer->write(goodBytes))
+          continue;
+
+
+        const auto lel = writer->commit();
+        REQUIRE_UNARY(lel);
+        i++;
+      }
+    });
+
+    std::thread reader([&ringBuffer, &ready]() {
+      ready.arrive_and_wait();
+      std::int64_t i = 0;
+
+      while (i < TIMES) {
+        const auto reader = ringBuffer.get_reader();
+        std::remove_cv_t<decltype(goodBytes)> srcBuf{};
+        if (!reader->read(srcBuf))
+          continue;
+
+        // CAPTURE(&srcBuf);
+
+        const auto good = reader->commit();
+        REQUIRE_UNARY(good);
+
+        if (srcBuf != goodBytes) {
+          CAPTURE(&srcBuf);
+          CAPTURE(&goodBytes);
+          CAPTURE(srcBuf);
+          REQUIRE_EQ(srcBuf, goodBytes);
+        }
+        i++;
+      }
+    });
+
+    writer.join();
+    reader.join();
   }
 }
 
@@ -566,5 +864,20 @@ TEST_CASE("testing syncronized logger, compile_time passing")
 
   REQUIRE_UNARY(testSink.empty());
 }
+
+TEST_CASE("Testing timeout reading")
+{
+  using namespace hage::literals;
+  using namespace std::chrono_literals;
+
+  hage::test::TestSink testSink;
+  hage::RingBuffer<4096> ringBuffer;
+  hage::Logger logger(&ringBuffer, &testSink);
+
+  REQUIRE_UNARY_FALSE(logger.read_log(10ms));
+  logger.info("Warning!");
+
+}
+#endif
 
 TEST_SUITE_END();

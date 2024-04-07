@@ -12,6 +12,30 @@ This is not implemented yet, but here are some components I want:
 
 - `Result` type, that can be used for better error handling.
 
+### Atomics library
+
+- Implement an `atomic::wait` that respects timeout. This can be done with futexes, at least on linux.
+  - Use said primitives in the logger, instead of the semaphores.
+
+This will be removed once https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2643r2.html get's implemented,
+but this could be quite some time.
+
+#### Todo
+
+- Implement tests for all types
+- Actually implement the wait and notify setups.
+  - Use futex2 on linux if it's available
+  - Actually understand this stuff, very good case study.
+- Implement `atomic_ref`
+- Maybe implement shared pointers (These are hard, and I'm not sure it's worth it)
+  - Implement for `std::shared_ptr` ?????
+  - Implement for `std::weak_ptr` ????
+- Figure out how to do the comparison in the waiting instructions effectivly.
+  - It should be by value representation, but it happens on `==` now.
+  - Maybe use `std::memcmp` ???
+  - https://github.com/llvm/llvm-project/issues/64830
+  - https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html (`__builtin_clear_padding`)
+
 ### Low latency logger
 
 The `hage::logger` construct is the result of me trying a technique I heard from a friend in HFT. Here are some of
@@ -20,7 +44,6 @@ the features:
 - Only serialization is done on the hot thread, stringification is done on the logging thread
 - Uses a fast, lock-free single producer, single consumer FIFO for message passing
 - Easy to customize for custom user types
-- Header only
 - Provides async and sync interface
 - Type safety for all formatting strings'
 - Requires C++20
@@ -121,3 +144,5 @@ if there are any logs available? This needs to be benchmarked.
 - Remove more template instantiation by making read operations on strings hit the same template.
   - I already did this with the `SmartSerializer` setup, but we are going to need more than that.
   - Maybe look into this when it becomes more of a problem.
+- Implement support for https://en.cppreference.com/w/cpp/utility/source_location
+- Implement a global logger
