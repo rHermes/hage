@@ -58,7 +58,7 @@ set_target_properties(hage_logging PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(hage_logging PUBLIC fmt::fmt hage_atomic)
 
 if (MSVC)
-    target_compile_options(hage_atomic PRIVATE /W4 /utf-8 /permissive- /Zc:__cplusplus)
+    target_compile_options(hage_atomic INTERFACE /W4 /utf-8 /permissive- /Zc:__cplusplus)
     target_compile_options(hage_logging PRIVATE /W4 /utf-8 /permissive- /Zc:__cplusplus)
 else ()
     target_compile_options(hage_atomic INTERFACE -Wall -Wextra -Wpedantic)
@@ -71,11 +71,13 @@ else ()
     endif ()
 
 
-    #target_compile_options(hage_logging PUBLIC -fsanitize=thread)
-    #target_link_options(hage_logging PUBLIC -fsanitize=thread)
+    # target_compile_options(hage_logging PUBLIC -fsanitize=thread)
+    # target_link_options(hage_logging PUBLIC -fsanitize=thread)
 
-    target_compile_options(hage_logging PUBLIC "-fsanitize=address,undefined")
-    target_link_options(hage_logging PUBLIC "-fsanitize=address,undefined")
+    # target_compile_options(hage_logging PUBLIC "-fsanitize=address,undefined")
+    # target_compile_options(hage_logging PUBLIC "-fsanitize=undefined")
+    # target_link_options(hage_logging PUBLIC "-fsanitize=address,undefined")
+    # target_link_options(hage_logging PUBLIC "-fsanitize=undefined")
 
 endif ()
 

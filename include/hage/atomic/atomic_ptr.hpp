@@ -166,6 +166,121 @@ public:
   // We also need a spinlock implementation, in the case where futex two is not implemented.
   void notify_one() noexcept { m_atomic.notify_one(); };
   void notify_all() noexcept { m_atomic.notnotify_all(); }
+
+  // These are my current implementations. They are very bad, but I will come back and improve them later. For now
+  // I only need the semantics.
+  TP wait_value(TP old, std::memory_order order = std::memory_order::seq_cst) const noexcept
+  {
+    TP val = load(order);
+    while (val == old) {
+      std::this_thread::yield();
+      val = load(order);
+    }
+
+    return val;
+  }
+
+  std::optional<TP> try_wait(TP old, std::memory_order order = std::memory_order::seq_cst) const noexcept
+  {
+    TP val = load(order);
+    if (val == old) {
+      return std::nullopt;
+    }
+
+    return val;
+  }
+
+  template<typename Rep, typename Period>
+  std::optional<TP> wait_for(TP old,
+                             const std::chrono::duration<Rep, Period>& relTime,
+                             std::memory_order order = std::memory_order::seq_cst) const
+  {
+    const auto startTs = std::chrono::steady_clock::now();
+
+    TP val = load(order);
+    while (val == old) {
+      std::this_thread::yield();
+
+      const auto dur = std::chrono::steady_clock::now() - startTs;
+      if (dur < relTime)
+        return std::nullopt;
+
+      val = load(order);
+    }
+
+    return val;
+  }
+
+  template<typename Clock, typename Duration>
+  std::optional<TP> wait_until(TP old,
+                               const std::chrono::time_point<Clock, Duration>& absTime,
+                               std::memory_order order = std::memory_order::seq_cst) const
+  {
+    const auto startTs = std::chrono::system_clock::now();
+    if (absTime < startTs)
+      return std::nullopt;
+
+    return wait_for(old, absTime - startTs, order);
+  }
+
+  // predicate versions of the previous.
+  template<typename P>
+    requires std::predicate<P, TP>
+  TP wait_with_predicate(P&& stop_waiting, std::memory_order order = std::memory_order::seq_cst) const
+  {
+    TP val = load(order);
+    while (!std::invoke(stop_waiting, val)) {
+      val = wait_value(val, order);
+    }
+    return val;
+  }
+
+  // Timed, unspecified duration.
+  template<class P>
+    requires std::predicate<P, TP>
+  std::optional<TP> try_wait_with_predicate(P&& stop_waiting,
+                                            std::memory_order order = std::memory_order::seq_cst) const
+  {
+    TP val = load(order);
+    if (!std::invoke(stop_waiting, val))
+      return std::nullopt;
+
+    return val;
+  }
+
+  template<typename P, typename Rep, typename Period>
+    requires std::predicate<P, TP>
+  std::optional<TP> wait_for_with_predicate(P&& stop_waiting,
+                                            const std::chrono::duration<Rep, Period>& relTime,
+                                            std::memory_order order = std::memory_order::seq_cst) const
+  {
+    const auto startTs = std::chrono::steady_clock::now();
+
+    TP val = load(order);
+    while (!std::invoke(stop_waiting, val)) {
+      std::this_thread::yield();
+
+      const auto dur = std::chrono::steady_clock::now() - startTs;
+      if (dur < relTime)
+        return std::nullopt;
+
+      val = load(order);
+    }
+
+    return val;
+  }
+
+  template<typename P, typename Clock, typename Duration>
+  std::optional<TP> wait_until_with_predicate(P&& stop_waiting,
+                                              const std::chrono::time_point<Clock, Duration>& absTime,
+                                              std::memory_order order = std::memory_order::seq_cst) const
+  {
+    const auto startTs = std::chrono::system_clock::now();
+    if (absTime < startTs)
+      return std::nullopt;
+
+    return wait_for_with_predicate(std::forward<P>(stop_waiting), absTime - startTs, order);
+  }
 };
 
 }

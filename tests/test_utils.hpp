@@ -23,12 +23,11 @@ struct ScopedFile
   ~ScopedFile() { std::filesystem::remove(path); }
 };
 
-
 struct ScopedTempFile
 {
   std::filesystem::path path;
   explicit ScopedTempFile(const fmt::format_string<std::uint32_t> prefix)
-  : path{ temp_file_name(prefix) }
+    : path{ temp_file_name(prefix) }
   {
   }
 

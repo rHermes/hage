@@ -128,7 +128,6 @@ class VectorBuffer final : public ByteBuffer
 
 public:
   [[nodiscard]] std::unique_ptr<ByteBuffer::Reader> get_reader() override { return std::make_unique<Reader>(*this); }
-
   [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override { return std::make_unique<Writer>(*this); }
 
   [[nodiscard]] constexpr std::size_t capacity() override { return std::numeric_limits<std::size_t>::max(); }

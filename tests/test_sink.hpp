@@ -45,8 +45,8 @@ private:
 
     Payload(const hage::LogLevel level, const timestamp_type ts, std::string line)
       : level{ level }
-    , ts{ std::move(ts) }
-    , line{ std::move(line) }
+      , ts{ std::move(ts) }
+      , line{ std::move(line) }
     {
     }
   };

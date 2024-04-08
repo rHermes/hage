@@ -5,6 +5,7 @@
 #include <concepts>
 #include <optional>
 #include <thread>
+#include <functional>
 
 #include "concepts.hpp"
 

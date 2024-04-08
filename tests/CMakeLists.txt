@@ -16,7 +16,8 @@ add_executable(hage_test doctest.cpp
         test_sink.hpp
         test_utils.hpp
         test_utils.cpp
-        ring_buffer_tests.cpp)
+        ring_buffer_tests.cpp
+        atomics_tests.cpp)
 
 #target_compile_features(hage_test PUBLIC cxx_std_20)
 # set_target_properties(hage_test PROPERTIES CXX_EXTENSIONS OFF)
@@ -35,21 +36,21 @@ else()
 
 
     # target_compile_options(hage_test PUBLIC -fsanitize=thread)
-    # target_link_options(hage_test PUBLIC -fsanitize=thread)
+    #target_link_options(hage_test PUBLIC -fsanitize=thread)
 
 
     #target_compile_options(hage_test PUBLIC "-fsanitize=address,undefined")
     #target_link_options(hage_test PUBLIC "-fsanitize=address,undefined")
 
-    target_compile_options(hage_test PUBLIC "-fsanitize=address" )
-    target_compile_options(hage_test PUBLIC "-fsanitize=undefined" )
-    target_link_options(hage_test PUBLIC "-fsanitize=address")
-    target_link_options(hage_test PUBLIC  "-fsanitize=undefined")
+    # target_compile_options(hage_test PUBLIC "-fsanitize=address" )
+    #target_compile_options(hage_test PUBLIC "-fsanitize=undefined" )
+    # target_link_options(hage_test PUBLIC "-fsanitize=address")
+    #target_link_options(hage_test PUBLIC  "-fsanitize=undefined")
 endif()
 
 # target_compile_definitions(hage_test PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS)
 
-target_link_libraries(hage_test PRIVATE hage_logging doctest::doctest)
+target_link_libraries(hage_test PRIVATE hage_logging hage_atomic doctest::doctest)
 # add_test(NAME hage_test_test COMMAND hage_test)
 
 include(doctest)

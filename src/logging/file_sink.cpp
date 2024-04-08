@@ -12,7 +12,6 @@ hage::FileSink::receive(LogLevel level, const timestamp_type& ts, std::string_vi
   // us to get the size written directly. If profiling shows this to be the weak link, I'll implement
   // it then.
   auto logLine = [&line, &ts, this](const std::string_view& lev) {
-
     m_out.print("[{:%F %T %z}] [{: <5}]: {}\n", ts, lev, line);
     m_bytesWritten += fmt::formatted_size("[{:%F %T %z}] [{: <5}]: {}\n", ts, lev, line);
   };
@@ -20,21 +19,21 @@ hage::FileSink::receive(LogLevel level, const timestamp_type& ts, std::string_vi
   switch (level) {
     case LogLevel::Trace:
       logLine("TRACE");
-    break;
+      break;
     case LogLevel::Debug:
       logLine("DEBUG");
-    break;
+      break;
     case LogLevel::Info:
       logLine("INFO");
-    break;
+      break;
     case LogLevel::Warn:
       logLine("WARN");
-    break;
+      break;
     case LogLevel::Error:
       logLine("ERROR");
-    break;
+      break;
     case LogLevel::Critical:
       logLine("CRIT");
-    break;
+      break;
   }
 }

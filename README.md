@@ -14,27 +14,58 @@ This is not implemented yet, but here are some components I want:
 
 ### Atomics library
 
-- Implement an `atomic::wait` that respects timeout. This can be done with futexes, at least on linux.
-  - Use said primitives in the logger, instead of the semaphores.
+The `hage::atomic<T>` template implements the ["Improving C++ concurrency features"][p2643] version of atomics, that
+add several "waiting" features to the `.wait()` version of methods. I needed this for my low latency logger.
 
-This will be removed once https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2643r2.html get's implemented,
-but this could be quite some time.
+Features:
+
+- Implements [P2643][p2643] paper.
+- Just an alias for `std::atomic` except for the new methods.
+
+This will be removed once the paper gets implemented in the standard and when I regularly use a compiler that implements
+them. In the future, this will just be an alias for `std::atomics`. There are no implicit conversions here, so you
+choose to use one or the other. *(I have no idea why you would use mine, but here it is)*
+
+Here is a simple example, showing of.
+
+```c++
+#include <iostream>
+#include <hage/atomic/atomic.hpp>
+
+int main() {
+  using namespace std::chrono_literals;
+
+  hage::atomic<int> wow;
+
+  wow.store(100);
+
+  // We only want to wait for max 10 seconds.
+  std::cout << "Starting waiting\n";
+  wow.wait_for(100, 10s);
+  std::cout << "We finished waiting!\n";
+  return 0;
+}
+```
 
 #### Todo
 
 - Implement tests for all types
+- Create a better test harness
+- Create better examples, like stop sources.
 - Actually implement the wait and notify setups.
-  - Use futex2 on linux if it's available
-  - Actually understand this stuff, very good case study.
+    - Use futex2 on linux if it's available
+    - Actually understand this stuff, very good case study.
 - Implement `atomic_ref`
 - Maybe implement shared pointers (These are hard, and I'm not sure it's worth it)
-  - Implement for `std::shared_ptr` ?????
-  - Implement for `std::weak_ptr` ????
+    - Implement for `std::shared_ptr` ?????
+    - Implement for `std::weak_ptr` ????
 - Figure out how to do the comparison in the waiting instructions effectivly.
-  - It should be by value representation, but it happens on `==` now.
-  - Maybe use `std::memcmp` ???
-  - https://github.com/llvm/llvm-project/issues/64830
-  - https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html (`__builtin_clear_padding`)
+    - It should be by value representation, but it happens on `==` now.
+    - Maybe use `std::memcmp` ???
+    - https://github.com/llvm/llvm-project/issues/64830
+    - https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html (`__builtin_clear_padding`)
+
+[p2643]: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2643r2.html "Improving C++ concurrency features"
 
 ### Low latency logger
 
@@ -89,7 +120,7 @@ int main()
 
 The idea is that going from a datatype to a string is often expensive, compared to serializing the object. An example
 is floats, where a serialization is a no-op, but converting them to a string is quite expensive. The idea is that
-in the **hot thread** we serialize a function pointer and the arguments, and push them into a FIFO.  IN the **logger
+in the **hot thread** we serialize a function pointer and the arguments, and push them into a FIFO. IN the **logger
 thread** we deserialize the function pointer, and call it, with the FIFO as an argument. This works, because the
 function pointer that the user passes in, know the types of its arguments. Since we know these functions at compile
 time, we are able to pass the type information and order from the **hot thread** to the **logger thread** without
@@ -114,8 +145,8 @@ using namespace hage::literals;
 logger.info("Hello there {}"_fmt, 23);
 ```
 
-I've decided to get the time in the hot thread, but this can easily be changed to put it into the logger thread. 
-The idea is that we want to know the time when it was logged, rather than when it was 
+I've decided to get the time in the hot thread, but this can easily be changed to put it into the logger thread.
+The idea is that we want to know the time when it was logged, rather than when it was
 
 Another semi mistake I've made, is that I've made the Buffer implementation a bit too flexible. Really it will always
 be some sort of ring buffer. Now it's very general. The part where this reflects a lot is that the read operations
@@ -127,22 +158,22 @@ In the future I'm going to rip that out and instead use exceptions if we cannot 
 #### TODO
 
 - Update the readme
-  - Up-to-date code examples
-  - History section moved down, It's not so interesting.
+    - Up-to-date code examples
+    - History section moved down, It's not so interesting.
 - Produce better examples and tests.
 - Make error handling in reading better.
 - Create benchmarks
 - Add some sort of mode where we can `try_to_write`, and `always_read` which doesn't attempt to read, but merely sees
-if there are any logs available? This needs to be benchmarked.
+  if there are any logs available? This needs to be benchmarked.
 - Add macros for logging, that gets removed at compile time, if we define away the log level
 - Create rotating file sink
 - Create more serializers for standard library.
 - Think about how this will integrate towards a stop source.
-  - What happens when the writer is done?
+    - What happens when the writer is done?
 - Should I implement some sort of tag system to the loggers that is passed to the sinks? Or should that be on the sinks?
 - Add some sort of integration towards co_routines, to allow a single logger thread to async read from multiple loggers.
 - Remove more template instantiation by making read operations on strings hit the same template.
-  - I already did this with the `SmartSerializer` setup, but we are going to need more than that.
-  - Maybe look into this when it becomes more of a problem.
+    - I already did this with the `SmartSerializer` setup, but we are going to need more than that.
+    - Maybe look into this when it becomes more of a problem.
 - Implement support for https://en.cppreference.com/w/cpp/utility/source_location
 - Implement a global logger

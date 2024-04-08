@@ -2,10 +2,9 @@
 
 #include "byte_buffer.hpp"
 
-#include <hage/atomic/atomic.hpp>
 #include <fmt/compile.h>
 #include <fmt/core.h>
-#include <semaphore>
+#include <hage/atomic/atomic.hpp>
 
 #include "serializers.hpp"
 #include "sink.hpp"
@@ -51,12 +50,11 @@ public:
     : m_buffer{ buffer }
     , m_sink{ sink }
     , m_maxMessageSize(maxMessageSize)
-  , m_capacity(buffer->capacity())
+    , m_capacity(buffer->capacity())
   {
     if (m_capacity < m_maxMessageSize)
       throw std::runtime_error("The buffer needs to be able to store at least one message");
 
-    // m_maxMessages = buffer->capacity() / m_maxMessageSize;
     m_bytesAvailible.store(m_capacity);
   }
 
@@ -66,7 +64,6 @@ public:
   {
     if (m_bytesAvailible.load(std::memory_order::acquire) == m_capacity)
       return false;
-
 
     const auto bytesRead = internal_read_log();
 
@@ -91,7 +88,7 @@ public:
     m_bytesAvailible.notify_one();
   }
 
-  template <typename Rep, typename Period>
+  template<typename Rep, typename Period>
   bool read_log(const std::chrono::duration<Rep, Period>& timeout)
   {
 
@@ -291,8 +288,6 @@ private:
   ByteBuffer* m_buffer{};
   Sink* m_sink;
 
-
-
   // The max message size in bytes.
   std::size_t m_maxMessageSize;
   std::size_t m_capacity;
@@ -323,10 +318,7 @@ private:
     if (logLevel < m_minLevel.load(std::memory_order::relaxed))
       return;
 
-
-    m_bytesAvailible.wait_with_predicate([this](const std::size_t v) {
-      return m_maxMessageSize <= v;
-    });
+    m_bytesAvailible.wait_with_predicate([this](const std::size_t v) { return m_maxMessageSize <= v; });
 
     if (!internal_try_log(logLevel, std::forward<Args>(args)...))
       throw std::runtime_error("We were unable to write to the log, this should never happen");

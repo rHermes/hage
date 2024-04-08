@@ -9,7 +9,8 @@ namespace hage {
 class FileSink final : public Sink
 {
 public:
-  explicit FileSink(const std::filesystem::path& path, const int flags = fmt::file::WRONLY | fmt::file::CREATE | fmt::file::TRUNC)
+  explicit FileSink(const std::filesystem::path& path,
+                    const int flags = fmt::file::WRONLY | fmt::file::CREATE | fmt::file::TRUNC)
     : m_out(fmt::output_file(path.string(), flags))
   {
   }
