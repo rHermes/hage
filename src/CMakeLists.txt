@@ -7,7 +7,6 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(fmt)
 
-
 set(ATOMIC_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/atomic/atomic.hpp"
         "${hage_SOURCE_DIR}/include/hage/atomic/atomic_base.hpp"
@@ -40,10 +39,6 @@ target_sources(hage_atomic INTERFACE
 
 target_include_directories(hage_atomic INTERFACE ../include)
 
-# Users of this library needs c++20
-target_compile_features(hage_atomic INTERFACE cxx_std_20)
-set_target_properties(hage_atomic PROPERTIES CXX_EXTENSIONS OFF)
-
 add_library(hage_logging ${LOGGING_HEADER_LIST}
         logging/console_sink.cpp
         logging/file_sink.cpp)
@@ -51,36 +46,40 @@ add_library(hage_logging ${LOGGING_HEADER_LIST}
 
 # We need this directory, and users of our library will need it to.
 target_include_directories(hage_logging PUBLIC ../include)
-
-# Users of this library needs c++20
-target_compile_features(hage_logging PUBLIC cxx_std_20)
-set_target_properties(hage_logging PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(hage_logging PUBLIC fmt::fmt hage_atomic)
 
-if (MSVC)
-    target_compile_options(hage_atomic INTERFACE /W4 /utf-8 /permissive- /Zc:__cplusplus)
-    target_compile_options(hage_logging PRIVATE /W4 /utf-8 /permissive- /Zc:__cplusplus)
-else ()
-    target_compile_options(hage_atomic INTERFACE -Wall -Wextra -Wpedantic)
-    target_compile_options(hage_logging PRIVATE -Wall -Wextra -Wpedantic)
+foreach (target_var IN ITEMS hage_atomic hage_logging)
+    get_target_property(target_type ${target_var} TYPE)
 
-    CHECK_CXX_COMPILER_FLAG("-Wno-interference-size" COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
-    if (COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
-        target_compile_options(hage_atomic INTERFACE -Wno-interference-size)
-        target_compile_options(hage_logging PRIVATE -Wno-interference-size)
+    if (target_type STREQUAL "INTERFACE_LIBRARY")
+        set(pub_type INTERFACE)
+        set(priv_type INTERFACE)
+    else ()
+        set(pub_type PUBLIC)
+        set(priv_type PRIVATE)
     endif ()
 
+    target_compile_features(${target_var} ${pub_type} cxx_std_20)
+    set_target_properties(${target_var} PROPERTIES CXX_EXTENSIONS OFF)
 
-    # target_compile_options(hage_logging PUBLIC -fsanitize=thread)
-    # target_link_options(hage_logging PUBLIC -fsanitize=thread)
 
-    # target_compile_options(hage_logging PUBLIC "-fsanitize=address,undefined")
-    # target_compile_options(hage_logging PUBLIC "-fsanitize=undefined")
-    # target_link_options(hage_logging PUBLIC "-fsanitize=address,undefined")
-    # target_link_options(hage_logging PUBLIC "-fsanitize=undefined")
+    if (MSVC)
+        target_compile_options(${target_var} ${priv_type} /W4 /utf-8 /permissive- /Zc:__cplusplus)
+    else ()
+        target_compile_options(${target_var} ${priv_type} -Wall -Wextra -Wpedantic)
 
-endif ()
+        CHECK_CXX_COMPILER_FLAG("-Wno-interference-size" COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
+        if (COMPILER_SUPPORTS_NO_INTERFERENCE_SIZE)
+            target_compile_options(${target_var} ${priv_type} -Wno-interference-size)
+        endif ()
 
+        # target_compile_options(${target_var} ${pub_type} -fsanitize=thread)
+        # target_link_options(${target_var} ${pub_type} -fsanitize=thread)
+
+        # target_compile_options(${target_var} ${pub_type}  "-fsanitize=address,undefined")
+        # target_link_options(${target_var} ${pub_type}  "-fsanitize=address,undefined")
+    endif ()
+endforeach ()
 
 source_group(
         TREE "${PROJECT_SOURCE_DIR}/include"

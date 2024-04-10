@@ -76,7 +76,7 @@ the features:
 - Uses a fast, lock-free single producer, single consumer FIFO for message passing
 - Easy to customize for custom user types
 - Provides async and sync interface
-- Type safety for all formatting strings'
+- Type safety for all formatting strings
 - Requires C++20
 - Allows for format string passing via template parameters!
 - Uses `fmt` for fast formatting.
