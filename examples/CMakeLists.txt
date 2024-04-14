@@ -1,8 +1,9 @@
 
 add_executable(compiler_bug_1 compiler_bug_1.cpp)
 add_executable(compiler_bug_2 compiler_bug_2.cpp)
+add_executable(play play.cpp)
 
-foreach (target_var IN ITEMS compiler_bug_1 compiler_bug_2)
+foreach (target_var IN ITEMS compiler_bug_1 compiler_bug_2 play)
     target_compile_features(${target_var} PUBLIC cxx_std_20)
     set_target_properties(${target_var} PROPERTIES CXX_EXTENSIONS OFF)
 
