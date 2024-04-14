@@ -1,5 +1,7 @@
 #pragma once
-#include "../misc.hpp"
+
+#include <hage/core/concepts.hpp>
+
 #include <chrono>
 #include <vector>
 

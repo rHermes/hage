@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../misc.hpp"
+#include <hage/core/misc.hpp>
+
 #include "byte_buffer.hpp"
 
 #include <span>

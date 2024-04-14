@@ -1,7 +1,6 @@
+#include <fmt/core.h>
 #include <fmt/chrono.h>
 #include <fmt/color.h>
-#include <fmt/compile.h>
-
 #include <hage/logging/file_sink.hpp>
 
 void

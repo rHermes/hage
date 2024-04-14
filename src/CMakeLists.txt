@@ -7,6 +7,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(fmt)
 
+
+set(CORE_HEADER_LIST
+        "${hage_SOURCE_DIR}/include/hage/core/misc.hpp"
+        "${hage_SOURCE_DIR}/include/hage/core/lifetime_tester.hpp"
+        "${hage_SOURCE_DIR}/include/hage/core/concepts.hpp"
+)
+
+
 set(ATOMIC_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/atomic/atomic.hpp"
         "${hage_SOURCE_DIR}/include/hage/atomic/atomic_base.hpp"
@@ -19,7 +27,7 @@ set(ATOMIC_HEADER_LIST
 
 
 set(LOGGING_HEADER_LIST
-        "${hage_SOURCE_DIR}/include/hage/misc.hpp"
+
         "${hage_SOURCE_DIR}/include/hage/logging.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/ring_buffer.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/vector_buffer.hpp"
@@ -30,6 +38,11 @@ set(LOGGING_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/logging/file_sink.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/console_sink.hpp"
 )
+
+add_library(hage_core INTERFACE)
+
+target_sources(hage_core INTERFACE ${CORE_HEADER_LIST})
+target_include_directories(hage_core INTERFACE ../include)
 
 add_library(hage_atomic INTERFACE)
 
@@ -43,12 +56,11 @@ add_library(hage_logging ${LOGGING_HEADER_LIST}
         logging/console_sink.cpp
         logging/file_sink.cpp)
 
-
 # We need this directory, and users of our library will need it to.
 target_include_directories(hage_logging PUBLIC ../include)
-target_link_libraries(hage_logging PUBLIC fmt::fmt hage_atomic)
+target_link_libraries(hage_logging PUBLIC fmt::fmt hage_atomic hage_core)
 
-foreach (target_var IN ITEMS hage_atomic hage_logging)
+foreach (target_var IN ITEMS hage_atomic hage_logging hage_core)
     get_target_property(target_type ${target_var} TYPE)
 
     if (target_type STREQUAL "INTERFACE_LIBRARY")
