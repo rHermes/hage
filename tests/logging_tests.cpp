@@ -4,6 +4,8 @@
 #include <latch>
 #include <thread>
 
+#include <hage/core/misc.hpp>
+
 #include <hage/logging.hpp>
 #include <hage/logging/file_sink.hpp>
 #include <hage/logging/ring_buffer.hpp>
@@ -245,6 +247,7 @@ TEST_CASE_TEMPLATE("Single produser, single consumer buffers", BufferType, hage:
   BufferType buff;
   hage::ByteBuffer& buffer = buff;
 
+#ifdef HAGE_DEBUG
   SUBCASE("Creating two readers should throw")
   {
     auto reader1 = buffer.get_reader();
@@ -256,6 +259,7 @@ TEST_CASE_TEMPLATE("Single produser, single consumer buffers", BufferType, hage:
     auto writer = buffer.get_writer();
     REQUIRE_THROWS(std::ignore = buffer.get_writer());
   }
+#endif
 }
 
 TEST_CASE("RingBuffer")

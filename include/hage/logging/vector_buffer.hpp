@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hage/core/misc.hpp>
 #include "byte_buffer.hpp"
 
 #include <algorithm>
@@ -20,8 +21,11 @@ class VectorBuffer final : public ByteBuffer
 
   using index_type = std::ptrdiff_t;
 
+
+#ifdef HAGE_DEBUG
   bool m_hasReader{ false };
   bool m_hasWriter{ false };
+#endif
 
   index_type m_writeLevel{ 0 };
 
@@ -31,18 +35,23 @@ class VectorBuffer final : public ByteBuffer
     explicit Reader(VectorBuffer& parent)
       : m_parent(parent)
     {
+#ifdef HAGE_DEBUG
       std::scoped_lock lk(m_parent.m_mtx);
+
       if (m_parent.m_hasReader)
         throw std::runtime_error("Two readers created, only 1 is supported at a time");
 
       m_parent.m_hasReader = true;
+#endif
     }
 
+#ifdef HAGE_DEBUG
     ~Reader() override
     {
       std::scoped_lock lk(m_parent.m_mtx);
       m_parent.m_hasReader = false;
     }
+#endif
 
     bool read(std::span<std::byte> dst) override
     {
@@ -85,17 +94,21 @@ class VectorBuffer final : public ByteBuffer
     explicit Writer(VectorBuffer& parent)
       : m_parent(parent)
     {
+#ifdef HAGE_DEBUG
       std::scoped_lock lk(m_parent.m_mtx);
       if (m_parent.m_hasWriter)
         throw std::runtime_error("Two writers created, only 1 is supported at a time");
 
       m_parent.m_hasWriter = true;
+#endif
     }
 
     ~Writer() override
     {
       std::scoped_lock lk(m_parent.m_mtx);
+#ifdef HAGE_DEBUG
       m_parent.m_hasWriter = false;
+#endif
 
       m_parent.m_q.erase(std::next(m_parent.m_q.end(), m_parent.m_writeLevel), m_parent.m_q.end());
       m_parent.m_writeLevel = 0;

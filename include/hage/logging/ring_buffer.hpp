@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hage/core/assert.hpp>
 #include <hage/core/misc.hpp>
 
 #include "byte_buffer.hpp"
@@ -18,17 +19,21 @@ namespace hage {
 template<std::ptrdiff_t N>
 class RingBuffer final : public ByteBuffer
 {
+  static_assert(0 < N, "We don't allow RingBuffers with non positive sizes");
 
-  alignas(details::destructive_interference_size) std::atomic<std::ptrdiff_t> m_head{ 0 };
-  alignas(details::destructive_interference_size) std::ptrdiff_t m_cachedHead{ 0 };
+  alignas(detail::destructive_interference_size) std::atomic<std::ptrdiff_t> m_head{ 0 };
+  alignas(detail::destructive_interference_size) std::ptrdiff_t m_cachedHead{ 0 };
 
-  alignas(details::destructive_interference_size) std::atomic<std::ptrdiff_t> m_tail{ 0 };
-  alignas(details::destructive_interference_size) std::ptrdiff_t m_cachedTail{ 0 };
+  alignas(detail::destructive_interference_size) std::atomic<std::ptrdiff_t> m_tail{ 0 };
+  alignas(detail::destructive_interference_size) std::ptrdiff_t m_cachedTail{ 0 };
 
-  alignas(details::destructive_interference_size) std::array<std::byte, N + 1> m_buff{};
+  alignas(detail::destructive_interference_size) std::array<std::byte, N + 1> m_buff{};
 
-  alignas(details::destructive_interference_size) std::atomic_flag m_hasReader;
-  alignas(details::destructive_interference_size) std::atomic_flag m_hasWriter;
+
+#ifdef HAGE_DEBUG
+  alignas(detail::destructive_interference_size) std::atomic_flag m_hasReader;
+  alignas(detail::destructive_interference_size) std::atomic_flag m_hasWriter;
+#endif
 
   class Reader final : public ByteBuffer::Reader
   {
@@ -36,13 +41,18 @@ class RingBuffer final : public ByteBuffer
     explicit Reader(RingBuffer& parent)
       : m_parent{ parent }
     {
+
+#ifdef HAGE_DEBUG
       if (m_parent.m_hasReader.test_and_set(std::memory_order::acq_rel))
         throw std::runtime_error("We can only have one concurrent reader for RingBuffer");
+#endif
 
       m_shadowHead = m_parent.m_head.load(std::memory_order::relaxed);
     }
 
+#ifdef HAGE_DEBUG
     ~Reader() override { m_parent.m_hasReader.clear(std::memory_order::release); }
+#endif
 
     bool read(std::span<std::byte> dst) override
     {
@@ -111,13 +121,17 @@ class RingBuffer final : public ByteBuffer
     explicit Writer(RingBuffer& parent)
       : m_parent{ parent }
     {
+#ifdef HAGE_DEBUG
       if (m_parent.m_hasWriter.test_and_set(std::memory_order::acq_rel))
         throw std::runtime_error("We can only have one concurrent writer for RingBuffer");
+#endif
 
       m_shadowTail = m_parent.m_tail.load(std::memory_order::relaxed);
     }
 
+#ifdef HAGE_DEBUG
     ~Writer() override { m_parent.m_hasWriter.clear(std::memory_order::release); }
+#endif
 
     bool commit() override
     {

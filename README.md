@@ -6,6 +6,31 @@ It is not stable in **ANY WAY SHAPE OR FORM** and any usage is at your own risk.
 
 ## Components
 
+### Core library
+
+This is a core library that is included by most of the other libraries. It includes:
+
+#### Concepts
+
+Some concepts that is useful across applications.
+
+#### Lifetime tester
+
+A very simple lifetime tester, that can be used for quickly testing out move semantics or other.
+
+#### Assert
+
+This is a simple assert library. It's made so that I could learn about the preprocessor. The main
+need here is to be able to turn it off during release.
+
+
+
+#### TODO
+
+- Implement better documentation. For this libraries to be useful, I will need to have good documentation.
+- Think a bit about what kind of dependencies we will require.
+- Figure out how to do cmake install.
+
 ### Utility library
 
 This is not implemented yet, but here are some components I want:

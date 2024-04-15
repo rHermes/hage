@@ -1,7 +1,13 @@
 
+find_package(Threads REQUIRED)
+
 add_executable(compiler_bug_1 compiler_bug_1.cpp)
 add_executable(compiler_bug_2 compiler_bug_2.cpp)
 add_executable(play play.cpp)
+
+target_link_libraries(compiler_bug_1 PRIVATE Threads::Threads)
+
+# target_compile_options(compiler_bug_1 PRIVATE -pthread)
 
 foreach (target_var IN ITEMS compiler_bug_1 compiler_bug_2 play)
     target_compile_features(${target_var} PUBLIC cxx_std_20)

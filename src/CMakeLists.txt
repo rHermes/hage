@@ -12,6 +12,7 @@ set(CORE_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/core/misc.hpp"
         "${hage_SOURCE_DIR}/include/hage/core/lifetime_tester.hpp"
         "${hage_SOURCE_DIR}/include/hage/core/concepts.hpp"
+        "${hage_SOURCE_DIR}/include/hage/core/assert.hpp"
 )
 
 
