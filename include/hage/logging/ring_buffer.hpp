@@ -8,27 +8,28 @@
 #include <span>
 
 namespace hage {
-// This is a rather dumb container, but it will work for most
-// of our tests.
 
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4324) // aligntment warning.
 #endif
 
-template<std::ptrdiff_t N>
+/**
+ * This is the main @{ByteBuffer} implementation. Uses a ringbuffer to store the data.
+ * Optimized for reads and writes across threads.
+ * @tparam N The number of bytes the ringbuffer can hold at one time.
+ */
+template<std::size_t N>
 class RingBuffer final : public ByteBuffer
 {
-  static_assert(0 < N, "We don't allow RingBuffers with non positive sizes");
+  using index_type = std::size_t;
+  alignas(detail::destructive_interference_size) std::atomic<index_type> m_head{ 0 };
+  alignas(detail::destructive_interference_size) index_type m_cachedHead{ 0 };
 
-  alignas(detail::destructive_interference_size) std::atomic<std::ptrdiff_t> m_head{ 0 };
-  alignas(detail::destructive_interference_size) std::ptrdiff_t m_cachedHead{ 0 };
-
-  alignas(detail::destructive_interference_size) std::atomic<std::ptrdiff_t> m_tail{ 0 };
-  alignas(detail::destructive_interference_size) std::ptrdiff_t m_cachedTail{ 0 };
+  alignas(detail::destructive_interference_size) std::atomic<index_type> m_tail{ 0 };
+  alignas(detail::destructive_interference_size) index_type m_cachedTail{ 0 };
 
   alignas(detail::destructive_interference_size) std::array<std::byte, N + 1> m_buff{};
-
 
 #ifdef HAGE_DEBUG
   alignas(detail::destructive_interference_size) std::atomic_flag m_hasReader;
@@ -62,7 +63,7 @@ class RingBuffer final : public ByteBuffer
       auto newShadowHead = m_shadowHead;
 
       while (!dst.empty()) {
-        const auto sz = static_cast<std::ptrdiff_t>(dst.size_bytes());
+        const auto sz = dst.size_bytes();
 
         if (newShadowHead == m_parent.m_cachedTail) {
           m_parent.m_cachedTail = m_parent.m_tail.load(std::memory_order::acquire);
@@ -81,20 +82,20 @@ class RingBuffer final : public ByteBuffer
           const auto spaceLeft = m_parent.m_cachedTail - newShadowHead;
           const auto readSize = std::min(sz, spaceLeft);
 
-          std::memcpy(dst.data(), m_parent.m_buff.data() + newShadowHead, static_cast<std::size_t>(readSize));
+          std::memcpy(dst.data(), m_parent.m_buff.data() + newShadowHead, readSize);
           newShadowHead += readSize;
           m_bytesRead += readSize;
 
-          dst = dst.subspan(static_cast<std::size_t>(readSize));
+          dst = dst.subspan(readSize);
         } else {
           const auto spaceLeft = N + 1 - newShadowHead;
           const auto readSize = std::min(sz, spaceLeft);
 
-          std::memcpy(dst.data(), m_parent.m_buff.data() + newShadowHead, static_cast<std::size_t>(readSize));
+          std::memcpy(dst.data(), m_parent.m_buff.data() + newShadowHead, readSize);
           newShadowHead += readSize;
           m_bytesRead += readSize;
 
-          dst = dst.subspan(static_cast<std::size_t>(readSize));
+          dst = dst.subspan(readSize);
         }
       }
 
@@ -111,7 +112,7 @@ class RingBuffer final : public ByteBuffer
 
   private:
     RingBuffer& m_parent;
-    std::ptrdiff_t m_shadowHead;
+    index_type m_shadowHead;
     std::size_t m_bytesRead{ 0 };
   };
 
@@ -147,7 +148,7 @@ class RingBuffer final : public ByteBuffer
       auto newShadowTail = m_shadowTail;
 
       while (!src.empty()) {
-        const auto sz = static_cast<std::ptrdiff_t>(src.size_bytes());
+        const auto sz = src.size_bytes();
 
         if (newShadowTail == N + 1) {
           if (m_parent.m_cachedHead == 0) {
@@ -166,21 +167,21 @@ class RingBuffer final : public ByteBuffer
           const auto spaceLeft = N + 1 - newShadowTail;
           const auto writeSize = std::min(sz, spaceLeft);
 
-          std::memcpy(m_parent.m_buff.data() + newShadowTail, src.data(), static_cast<std::size_t>(writeSize));
+          std::memcpy(m_parent.m_buff.data() + newShadowTail, src.data(), writeSize);
           newShadowTail += writeSize;
           m_bytesWritten += writeSize;
 
-          src = src.subspan(static_cast<std::size_t>(writeSize));
+          src = src.subspan(writeSize);
         } else {
           // In this regard, the tail is behind the head
           const auto spaceLeft = m_parent.m_cachedHead - newShadowTail - 1;
           const auto writeSize = std::min(sz, spaceLeft);
 
-          std::memcpy(m_parent.m_buff.data() + newShadowTail, src.data(), static_cast<std::size_t>(writeSize));
+          std::memcpy(m_parent.m_buff.data() + newShadowTail, src.data(), writeSize);
           newShadowTail += writeSize;
           m_bytesWritten += writeSize;
 
-          src = src.subspan(static_cast<std::size_t>(writeSize));
+          src = src.subspan(writeSize);
         }
       }
 
@@ -191,7 +192,7 @@ class RingBuffer final : public ByteBuffer
 
   private:
     RingBuffer& m_parent;
-    std::ptrdiff_t m_shadowTail;
+    index_type m_shadowTail;
     std::size_t m_bytesWritten{ 0 };
   };
 

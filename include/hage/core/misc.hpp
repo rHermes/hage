@@ -24,7 +24,7 @@ byte_array(T... a)
 }
 // Explanation of the purpose of this template.
 // https://artificial-mind.net/blog/2020/10/03/always-false
-template <typename...>
+template<typename...>
 constexpr bool dependent_false = false;
 
 #if !defined(NDEBUG)

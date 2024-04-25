@@ -97,8 +97,6 @@ class RingBuffer final : public ByteBuffer
           return false;
         }
 
-
-
         if (m_shadowHead <= m_parent.m_cachedTail) {
           const auto spaceLeft = m_parent.m_cachedTail - m_shadowHead;
           const auto readSize = std::min(sz, spaceLeft);
@@ -230,70 +228,70 @@ public:
 
   [[nodiscard]] std::unique_ptr<ByteBuffer::Writer> get_writer() override
   {
-    //std::unique_ptr<Writer> out{new (std::align_val_t(alignof(Writer))) Writer(*this)};
-    // return out;
+    // std::unique_ptr<Writer> out{new (std::align_val_t(alignof(Writer))) Writer(*this)};
+    //  return out;
     return std::make_unique<Writer>(*this);
   }
   [[nodiscard]] std::size_t capacity() override { return N; }
 };
 
-
-
-void test1()
+void
+test1()
 {
 
-    RingBuffer<4096> ringBuffer;
-    std::latch ready(2);
+  RingBuffer<4096> ringBuffer;
+  std::latch ready(2);
 
-    // constexpr std::int64_t TIMES = 1;
-    constexpr std::int64_t TIMES = 100;
+  // constexpr std::int64_t TIMES = 1;
+  constexpr std::int64_t TIMES = 100;
 
-    static constexpr auto goodBytes = byte_array(1, 2, 3, 4, 5, 6, 7, 8);
+  static constexpr auto goodBytes = byte_array(1, 2, 3, 4, 5, 6, 7, 8);
 
-    std::thread writer([&ringBuffer, &ready]() {
-      ready.arrive_and_wait();
+  std::thread writer([&ringBuffer, &ready]() {
+    ready.arrive_and_wait();
 
-      std::int64_t i = 0;
+    std::int64_t i = 0;
 
-      while (i < TIMES) {
-        const auto writer = ringBuffer.get_writer();
-        if (!writer->write(goodBytes))
-          continue;
+    while (i < TIMES) {
+      const auto writer = ringBuffer.get_writer();
+      if (!writer->write(goodBytes))
+        continue;
 
+      const auto lel = writer->commit();
+      assert(lel);
+      i++;
+    }
+  });
 
-        const auto lel = writer->commit();
-        assert(lel);
-        i++;
+  std::thread reader([&ringBuffer, &ready]() {
+    ready.arrive_and_wait();
+    std::int64_t i = 0;
+
+    while (i < TIMES) {
+      const auto reader = ringBuffer.get_reader();
+      std::remove_cv_t<decltype(goodBytes)> srcBuf{};
+      if (!reader->read(srcBuf))
+        continue;
+
+      // CAPTURE(&srcBuf);
+
+      const auto good = reader->commit();
+      assert(good);
+
+      if (srcBuf != goodBytes) {
+        assert(false);
       }
-    });
+      i++;
+    }
+  });
 
-    std::thread reader([&ringBuffer, &ready]() {
-      ready.arrive_and_wait();
-      std::int64_t i = 0;
-
-      while (i < TIMES) {
-        const auto reader = ringBuffer.get_reader();
-        std::remove_cv_t<decltype(goodBytes)> srcBuf{};
-        if (!reader->read(srcBuf))
-          continue;
-
-        // CAPTURE(&srcBuf);
-
-        const auto good = reader->commit();
-        assert(good);
-
-        if (srcBuf != goodBytes) {
-          assert(false);
-        }
-        i++;
-      }
-    });
-
-    writer.join();
-    reader.join();
+  writer.join();
+  reader.join();
 }
 
-int main() {
+int
+main()
+{
   test1();
 
   /*

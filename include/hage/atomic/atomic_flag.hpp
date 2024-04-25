@@ -37,7 +37,6 @@ public:
   // We also need a spinlock implementation, in the case where futex two is not implemented.
   void notify_one() noexcept { m_flag.notify_one(); };
   void notify_all() noexcept { m_flag.notify_all(); }
-
 };
 
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <hage/core/misc.hpp>
 #include "byte_buffer.hpp"
+#include <hage/core/misc.hpp>
 
 #include <algorithm>
 #include <mutex>
@@ -20,7 +20,6 @@ class VectorBuffer final : public ByteBuffer
   std::vector<std::byte> m_q;
 
   using index_type = std::ptrdiff_t;
-
 
 #ifdef HAGE_DEBUG
   bool m_hasReader{ false };

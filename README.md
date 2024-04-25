@@ -23,13 +23,20 @@ A very simple lifetime tester, that can be used for quickly testing out move sem
 This is a simple assert library. It's made so that I could learn about the preprocessor. The main
 need here is to be able to turn it off during release.
 
-
-
 #### TODO
 
 - Implement better documentation. For this libraries to be useful, I will need to have good documentation.
 - Think a bit about what kind of dependencies we will require.
 - Figure out how to do cmake install.
+
+### Data structures
+
+This library includes datastructures that I used from time to time.
+
+Planned datastructures:
+- Slotmap implementation, take inspiration from rust
+- Index based linked list, with a skip list
+- Interval map, built on top of
 
 ### Utility library
 

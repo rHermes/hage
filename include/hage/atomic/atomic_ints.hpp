@@ -3,9 +3,9 @@
 #include <atomic>
 #include <chrono>
 #include <concepts>
+#include <functional>
 #include <optional>
 #include <thread>
-#include <functional>
 
 #include "concepts.hpp"
 
