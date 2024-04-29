@@ -8,30 +8,51 @@ namespace hage::test {
 [[nodiscard]] std::filesystem::path
 temp_file_name(fmt::format_string<std::uint32_t> prefix);
 
-/**
- * A simple utility class to delete a file on destruction.
- */
-struct ScopedFile
+namespace {
+
+template<bool IsDir>
+struct ScopedFsEntry final
 {
   std::filesystem::path path;
 
-  explicit ScopedFile(std::filesystem::path path)
-    : path{ std::move(path) }
+  ~ScopedFsEntry()
   {
+    if constexpr (IsDir) {
+      std::filesystem::remove_all(path);
+    } else {
+      std::filesystem::remove(path);
+    }
   }
-
-  ~ScopedFile() { std::filesystem::remove(path); }
 };
 
-struct ScopedTempFile
+template<bool IsDir>
+struct ScopedTempFsEntry final
 {
   std::filesystem::path path;
-  explicit ScopedTempFile(const fmt::format_string<std::uint32_t> prefix)
+
+  explicit ScopedTempFsEntry(const fmt::format_string<std::uint32_t> prefix)
     : path{ temp_file_name(prefix) }
   {
   }
 
-  ~ScopedTempFile() { std::filesystem::remove(path); }
+  ~ScopedTempFsEntry()
+  {
+    if constexpr (IsDir) {
+      std::filesystem::remove_all(path);
+    } else {
+      std::filesystem::remove(path);
+    }
+  }
 };
 
+}
+
+/**
+ * A simple utility class to delete a file on destruction.
+ */
+using ScopedFile = ScopedFsEntry<false>;
+using ScopedDir = ScopedFsEntry<true>;
+
+using ScopedTempFile = ScopedTempFsEntry<false>;
+using ScopedTempDir = ScopedTempFsEntry<true>;
 }

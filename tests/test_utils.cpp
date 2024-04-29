@@ -22,6 +22,8 @@ hage::test::temp_file_name(const fmt::format_string<std::uint32_t> prefix)
   }
 }
 
+// TODO(rHermes): Write tests for the temp_file_name utils.
+
 TEST_CASE("ScopedTempFile")
 {
   SUBCASE("Should remove file if it's created")

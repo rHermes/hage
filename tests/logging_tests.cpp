@@ -47,6 +47,7 @@ struct StringMaker<std::array<std::byte, N>>
   }
 };
 }
+
 TEST_SUITE_BEGIN("logging");
 
 TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<50>, hage::RingBuffer<4096>, hage::VectorBuffer)
@@ -241,7 +242,7 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<50>, hage::R
   }
 }
 
-TEST_CASE_TEMPLATE("Single produser, single consumer buffers", BufferType, hage::RingBuffer<4096>, hage::VectorBuffer)
+TEST_CASE_TEMPLATE("Single producer, single consumer buffers", BufferType, hage::RingBuffer<4096>, hage::VectorBuffer)
 {
   static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
   BufferType buff;
@@ -267,7 +268,7 @@ TEST_CASE("RingBuffer")
   constexpr std::size_t N = 10;
   hage::RingBuffer<N> buffer;
 
-  // We have some unique tests here, like being able to write a 100 zeros.
+  // We have some unique tests here, like being able to write 100 zeros.
   SUBCASE("Writing larger than buffer size, should fail")
   {
     const auto writer = buffer.get_writer();
@@ -275,7 +276,7 @@ TEST_CASE("RingBuffer")
     CHECK_UNARY_FALSE(writer->write(in));
   }
 
-  // We have some unique tests here, like being able to write a 100 zeros.
+  // We have some unique tests here, like being able to write 100 zeros.
   SUBCASE("Reading larger than buffer size, should fail")
   {
     const auto reader = buffer.get_reader();
@@ -284,7 +285,7 @@ TEST_CASE("RingBuffer")
   }
 
   // We are going to check that the writes fail across the style
-  SUBCASE("Writign and reading should not work for all positions in the buffer")
+  SUBCASE("Writing and reading should not work for all positions in the buffer")
   {
     const auto writer = buffer.get_writer();
     const auto reader = buffer.get_reader();

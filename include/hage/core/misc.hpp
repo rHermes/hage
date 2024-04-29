@@ -16,12 +16,14 @@ inline constexpr std::size_t destructive_interference_size = 64;
 
 }
 
+// For testing and other aplications.
 template<typename... T>
 [[nodiscard]] constexpr std::array<std::byte, sizeof...(T)>
 byte_array(T... a)
 {
   return { static_cast<std::byte>(a)... };
 }
+
 // Explanation of the purpose of this template.
 // https://artificial-mind.net/blog/2020/10/03/always-false
 template<typename...>

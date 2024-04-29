@@ -28,7 +28,6 @@ set(ATOMIC_HEADER_LIST
 
 
 set(LOGGING_HEADER_LIST
-
         "${hage_SOURCE_DIR}/include/hage/logging.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/ring_buffer.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/vector_buffer.hpp"
@@ -37,6 +36,7 @@ set(LOGGING_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/logging/serializers.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/sink.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/file_sink.hpp"
+        "${hage_SOURCE_DIR}/include/hage/logging/rotating_file_sink.hpp"
         "${hage_SOURCE_DIR}/include/hage/logging/console_sink.hpp"
 )
 
@@ -55,7 +55,8 @@ target_include_directories(hage_atomic INTERFACE ../include)
 
 add_library(hage_logging ${LOGGING_HEADER_LIST}
         logging/console_sink.cpp
-        logging/file_sink.cpp)
+        logging/file_sink.cpp
+        logging/rotating_file_sink.cpp)
 
 # We need this directory, and users of our library will need it to.
 target_include_directories(hage_logging PUBLIC ../include)

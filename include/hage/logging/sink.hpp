@@ -22,8 +22,17 @@ public:
   using timestamp_type = std::chrono::time_point<std::chrono::system_clock>;
 
   virtual ~Sink() = default;
-
   virtual void receive(LogLevel level, const timestamp_type& ts, std::string_view line) = 0;
+
+  // disable assignment operator (due to the problem of slicing):
+  Sink& operator=(Sink&&) = delete;
+  Sink& operator=(const Sink&) = delete;
+
+protected:
+  Sink() = default;
+  // enable copy and move semantics (callable only for derived classes):
+  Sink(const Sink&) = default;
+  Sink(Sink&&) = default;
 };
 
 /**

@@ -199,6 +199,11 @@ In the future I'm going to rip that out and instead use exceptions if we cannot 
   if there are any logs available? This needs to be benchmarked.
 - Add macros for logging, that gets removed at compile time, if we define away the log level
 - Create rotating file sink
+  - Add an event for new file creation?
+  - Implement more types:
+    - Size
+    - Date
+  - Separate the splitters and the time stamps.
 - Create more serializers for standard library.
 - Think about how this will integrate towards a stop source.
     - What happens when the writer is done?
