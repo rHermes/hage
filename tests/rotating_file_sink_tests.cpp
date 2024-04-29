@@ -4,84 +4,47 @@
 
 #include <hage/logging/rotating_file_sink.hpp>
 
-namespace {
-
-struct FalseSplitter
-{
-  [[nodiscard]] constexpr bool operator()(const hage::LogFileStats&) { return false; }
-};
-
-struct TrueSplitter
-{
-  [[nodiscard]] constexpr bool operator()(const hage::LogFileStats&) { return true; }
-};
-}
-
 TEST_SUITE_BEGIN("logging");
 
-TEST_CASE("AndSplitter")
+TEST_CASE("SizeRotater")
 {
-  hage::LogFileStats exampleStats1{ .bytes = 10 };
+  hage::SizeRotater rotater{ "test.log", 100 };
+  hage::LogFileStats underLimitStat{ .bytes = 10 };
+  hage::LogFileStats overLimitStat{ .bytes = 150 };
 
-  SUBCASE("Should handle more true")
+  REQUIRE_EQ(rotater.getRotateType(), hage::Rotater::Type::MoveBackwards);
+
+  SUBCASE("Should not break on smaller writing")
   {
-    hage::AndSplitter splitter{ TrueSplitter{}, TrueSplitter{} };
-
-    REQUIRE_UNARY(splitter(exampleStats1));
+    CHECK_UNARY_FALSE(rotater.shouldRotate(underLimitStat));
   }
 
-  SUBCASE("No splitters should produce true")
+  SUBCASE("Should break bigger files")
   {
-    hage::AndSplitter splitter{};
-
-    REQUIRE_UNARY(splitter(exampleStats1));
+    CHECK_UNARY(rotater.shouldRotate(overLimitStat));
   }
 
-  SUBCASE("All false should produce false")
+  SUBCASE("Zero backlog, should be empty")
   {
-    hage::AndSplitter splitter{ FalseSplitter{}, FalseSplitter{} };
-
-    REQUIRE_UNARY_FALSE(splitter(exampleStats1));
+    CHECK_UNARY(rotater.generateNames(underLimitStat, 0).empty());
   }
 
-  SUBCASE("One false should produce false")
+  SUBCASE("One backlog, should return just the base filename")
   {
-    hage::AndSplitter splitter{ TrueSplitter{}, FalseSplitter{} };
-
-    REQUIRE_UNARY_FALSE(splitter(exampleStats1));
-  }
-}
-
-TEST_CASE("OrSplitter")
-{
-  hage::LogFileStats exampleStats1{ .bytes = 10 };
-
-  SUBCASE("All true should be true")
-  {
-    hage::OrSplitter splitter{ TrueSplitter{}, TrueSplitter{} };
-
-    REQUIRE_UNARY(splitter(exampleStats1));
+    const auto names = rotater.generateNames(underLimitStat, 1);
+    CHECK_EQ(names.size(), 1);
+    CHECK_EQ(names[0], "test.log");
   }
 
-  SUBCASE("No splitters should produce false")
+  SUBCASE("More backlog, should return the right patterns")
   {
-    hage::OrSplitter splitter;
-
-    REQUIRE_UNARY_FALSE(splitter(exampleStats1));
-  }
-
-  SUBCASE("All false should produce false")
-  {
-    hage::OrSplitter splitter{ FalseSplitter{}, FalseSplitter{} };
-
-    REQUIRE_UNARY_FALSE(splitter(exampleStats1));
-  }
-
-  SUBCASE("One false should produce true")
-  {
-    hage::OrSplitter splitter{ TrueSplitter{}, FalseSplitter{} };
-
-    REQUIRE_UNARY(splitter(exampleStats1));
+    const auto names = rotater.generateNames(underLimitStat, 5);
+    CHECK_EQ(names.size(), 5);
+    CHECK_EQ(names[0], "test.log");
+    CHECK_EQ(names[1], "test.log.1");
+    CHECK_EQ(names[2], "test.log.2");
+    CHECK_EQ(names[3], "test.log.3");
+    CHECK_EQ(names[4], "test.log.4");
   }
 }
 
