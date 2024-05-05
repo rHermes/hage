@@ -1,0 +1,43 @@
+version: 2.1
+
+jobs:
+  linux-gcc20-release:
+    docker:
+      - image: cimg/base:2024.05
+    steps:
+      - checkout
+      - run:
+          command: >
+            cmake -B build 
+            -DCMAKE_CXX_COMPILER=g++
+            -DCMAKE_C_COMPILER=gcc
+            -DCMAKE_BUILD_TYPE=Release
+            -S .
+      - run:
+          command: cmake --build build --config Release
+      - run:
+          command: ctest --build-config Release
+  
+  linux-gcc20-debug:
+    docker:
+      - image: cimg/base:2024.05
+    steps:
+      - checkout
+      - run:
+          command: >
+            cmake -B build 
+            -DCMAKE_CXX_COMPILER=g++
+            -DCMAKE_C_COMPILER=gcc
+            -DCMAKE_BUILD_TYPE=Debug
+            -S .
+      - run:
+          command: cmake --build build --config Debug
+      - run:
+          command: ctest --build-config Debug
+
+workflows:
+  build_test:
+    jobs:
+      - linux-gcc20-release
+#    macos:
+#      xcode: 15.3.0
