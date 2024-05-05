@@ -14,6 +14,7 @@ RUN echo 'APT::Get::Assume-Yes "true";' > /etc/apt/apt.conf.d/90circleci && \
 		locales \
 		sudo \
 	&& \
+    sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && \
 	locale-gen en_US.UTF-8 && \
 	rm -rf /var/lib/apt/lists/* && \
 	\
@@ -54,40 +55,17 @@ RUN noInstallRecommends="" && \
 		gnupg \
 		gzip \
 		jq \
-		libcurl4-openssl-dev \
-		libmagic-dev \
-		# popular DB lib - MariaDB
-		libmariadb-dev \
-		# allows MySQL users to use MariaDB lib
-		libmariadb-dev-compat \
-		# popular DB lib - PostgreSQL
-		libpq-dev \
 		libssl-dev \
 		libsqlite3-dev \
 		lsof \
 		make \
-		# for ssh-enabled builds
-		nano \
-		net-tools \
-		netcat-openbsd \
-		openssh-client \
-		parallel \
 		# compiling tool
 		pkg-config \
-		postgresql-client \
-		python-is-python3 \
-		retry \
-		shellcheck \
-		software-properties-common \
 		# already installed but here for consistency
 		sudo \
 		tar \
 		tzdata \
 		unzip \
-		# for ssh-enabled builds
-		vim \
-		wget \
-		zip  \
         ninja-build cmake && \
 	git version
 

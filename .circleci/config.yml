@@ -33,34 +33,31 @@ commands:
       - store_test_results:
           path: build/test-results.xml
 
-jobs:
-  linux-gcc13-debug:
-    docker:
-      - image: rsentinel/gcc-builder:v0
-    resource_class: small
-    steps:
-      - checkout
-      - build_and_test:
-          cpp_compiler: "g++"
-          c_compiler: "gcc"
-          build_type: "Debug"
 
-  linux-gcc13-release:
+
+jobs:
+  linux-gcc13:
+    parameters:
+      build_type:
+        type: "enum"
+        enum: [ "Release", "Debug", "RelWithDebInfo" ]
     docker:
-      - image: rsentinel/gcc-builder:v0
+      - image: rsentinel/gcc-builder:latest
     resource_class: small
     steps:
       - checkout
       - build_and_test:
           cpp_compiler: "g++"
           c_compiler: "gcc"
-          build_type: "Release"
+          build_type: <<parameters.build_type>>
 
 
 workflows:
   build_test:
     jobs:
-      - linux-gcc13-debug
-      - linux-gcc13-release
+      - linux-gcc13:
+          matrix:
+            parameters:
+              build_type: [ "Release", "Debug", "RelWithDebInfo" ]
 #    macos:
 #      xcode: 15.3.0
