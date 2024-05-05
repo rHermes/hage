@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  windows: circleci/windows@5.0
+
 commands:
   build_and_test:
     description: "Configure, build and test with cmake"
@@ -54,6 +57,30 @@ jobs:
           c_compiler: "gcc"
           build_type: <<parameters.build_type>>
 
+  msvc-win64:
+    description: "Windows MSVC c++20 VS2022 x64 Build"
+    parameters:
+      build_type:
+        type: "enum"
+        enum: [ "Release", "Debug", "RelWithDebInfo" ]
+    executor:
+      name: windows/default
+      size: medium
+    steps:
+      - checkout
+      - run: systeminfo
+      - run: choco install -y cmake.install --installargs 'ADD_CMAKE_TO_PATH=User'
+      - run: choco install -y ninja
+      - run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=<<parameters.build_type>> -S .
+      - run: cmake --build build --config <<parameters.build_type>>
+      - run:
+          command: >
+           ctest --build-config <<parameters.build_type>>
+           --output-on-failure
+           --output-junit test-results.xml
+           --test-dir build
+      - store_test_results:
+         path: build/test-results.xml
 
 workflows:
   build_test:
@@ -63,5 +90,11 @@ workflows:
             parameters:
               build_type: [ "Release", "Debug", "RelWithDebInfo" ]
               res_type: ["small", "arm.medium"]
+
+      - msvc-win64:
+          matrix:
+            parameters:
+              build_type: [ "Release", "Debug", "RelWithDebInfo" ]
+
 #    macos:
 #      xcode: 15.3.0
