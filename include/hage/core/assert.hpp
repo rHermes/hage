@@ -2,6 +2,7 @@
 
 #include "misc.hpp"
 
+#include <stdexcept>
 #include <string_view>
 #include <utility>
 

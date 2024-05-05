@@ -79,7 +79,11 @@ foreach (target_var IN ITEMS hage_atomic hage_logging hage_core)
 
 
     if (MSVC)
-        target_compile_options(${target_var} ${priv_type} /W4 /utf-8 /permissive- /Zc:__cplusplus)
+        target_compile_options(${target_var} ${priv_type} /W4 /utf-8)
+
+        # These options make msvc act sane.
+        # This is to make sure that the new preprocessor is chosen, which is required
+        target_compile_options(${target_var} ${pub_type} /permissive- /Zc:__cplusplus /Zc:preprocessor)
     else ()
         target_compile_options(${target_var} ${priv_type} -Wall -Wextra -Wpedantic)
 
