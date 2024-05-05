@@ -41,9 +41,12 @@ jobs:
       build_type:
         type: "enum"
         enum: [ "Release", "Debug", "RelWithDebInfo" ]
+      res_type:
+        type: "enum"
+        enum: ["small", "arm.medium"]
     docker:
       - image: rsentinel/gcc-builder:latest
-    resource_class: small
+    resource_class: <<parameters.res_type>>
     steps:
       - checkout
       - build_and_test:
@@ -59,5 +62,6 @@ workflows:
           matrix:
             parameters:
               build_type: [ "Release", "Debug", "RelWithDebInfo" ]
+              res_type: ["small", "arm.medium"]
 #    macos:
 #      xcode: 15.3.0
