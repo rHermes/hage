@@ -16,6 +16,7 @@ public:
   }
 
   void receive(LogLevel, const timestamp_type&, std::string_view) override;
+  void flush();
 
   [[nodiscard]] constexpr std::size_t bytes_written() const { return m_bytesWritten; };
 

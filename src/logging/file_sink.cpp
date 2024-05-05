@@ -4,7 +4,7 @@
 #include <hage/logging/file_sink.hpp>
 
 void
-hage::FileSink::receive(LogLevel level, const timestamp_type& ts, std::string_view line)
+hage::FileSink::receive(const LogLevel level, const timestamp_type& ts, const std::string_view line)
 {
   // TODO(rHermes): The current way of keeping track of how much has been written is
   // ineffective. It would be better to create some sort of buffer in `fmt` that allowed
@@ -35,4 +35,9 @@ hage::FileSink::receive(LogLevel level, const timestamp_type& ts, std::string_vi
       logLine("CRIT");
       break;
   }
+}
+void
+hage::FileSink::flush()
+{
+  m_out.flush();
 }

@@ -1,5 +1,12 @@
 ---
 Language:        Cpp
-BasedOnStyle:  Mozilla
-ColumnLimit:     120
-
+BasedOnStyle: Mozilla
+AlignConsecutiveAssignments:
+  Enabled: true
+AlignConsecutiveMacros:
+  Enabled: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+ColumnLimit: 120
+FixNamespaceComments: true
+PackConstructorInitializers: CurrentLine

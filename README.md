@@ -18,6 +18,13 @@ Some concepts that is useful across applications.
 
 A very simple lifetime tester, that can be used for quickly testing out move semantics or other.
 
+#### A more composable `std::from_chars`
+
+Based on the work in the following paper
+["A More Composable from_chars"](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2584r0.pdf),
+we implement some of the suggestions there. This makes `std::from_chars` easier to use.
+
+
 #### Assert
 
 This is a simple assert library. It's made so that I could learn about the preprocessor. The main
@@ -28,6 +35,7 @@ need here is to be able to turn it off during release.
 - Implement better documentation. For this libraries to be useful, I will need to have good documentation.
 - Think a bit about what kind of dependencies we will require.
 - Figure out how to do cmake install.
+- Implement all the features from https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2584r0.pdf
 
 ### Data structures
 
@@ -214,3 +222,10 @@ In the future I'm going to rip that out and instead use exceptions if we cannot 
     - Maybe look into this when it becomes more of a problem.
 - Implement support for https://en.cppreference.com/w/cpp/utility/source_location
 - Implement a global logger
+- Rework rotating file sink
+  - This is way too complex for what it does, overengineered.
+  - Let's just go for an enum or maybe even two base classes.
+  - Support infinite backlog?
+- Split this repo, into it's own self contained repository.
+  - Make it more clear and targed
+  - Will inspire actual usage.
