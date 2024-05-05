@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <optional>
 #include <thread>
 
 #include "concepts.hpp"

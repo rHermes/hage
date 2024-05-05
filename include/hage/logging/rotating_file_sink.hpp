@@ -99,7 +99,7 @@ private:
 class TimeRotater final : public Rotater
 {
 public:
-  using fmt_string = fmt::format_string<std::chrono::utc_clock::time_point>;
+  using fmt_string = fmt::format_string<std::chrono::system_clock::time_point>;
   explicit TimeRotater(fmt_string base);
 
   [[nodiscard]] bool shouldRotate(const LogFileStats& stats) override;
