@@ -1,29 +1,6 @@
 version: 2.1
 
 commands:
-  setup_gcc12:
-    steps:
-      - run:
-          name: "Download dependencies"
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y ninja-build cmake g++-12 libstdc++-12-dev
-  setup_debian:
-    steps:
-      - run:
-          name: "Download dependencies"
-          command: |
-            apt-get update
-            apt-get install -y ninja-build cmake
-      - run:
-          name: "Create user"
-          command: |
-            useradd -m -U circleci
-            su -l circleci
-            cd /home/circleci
-            mkdir project
-            cd project
-
   build_and_test:
     description: "Configure, build and test with cmake"
     parameters:
@@ -68,16 +45,15 @@ jobs:
           c_compiler: "gcc"
           build_type: "Debug"
 
-  linux-gcc12-release:
+  linux-gcc13-release:
     docker:
-      - image: cimg/base:current-22.04
+      - image: rsentinel/gcc-builder:v0
     resource_class: small
     steps:
-      - setup_gcc12
       - checkout
       - build_and_test:
-          cpp_compiler: "g++-12"
-          c_compiler: "gcc-12"
+          cpp_compiler: "g++"
+          c_compiler: "gcc"
           build_type: "Release"
 
 
@@ -85,6 +61,6 @@ workflows:
   build_test:
     jobs:
       - linux-gcc13-debug
-      - linux-gcc12-release
+      - linux-gcc13-release
 #    macos:
 #      xcode: 15.3.0
