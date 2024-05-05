@@ -1,43 +1,73 @@
 version: 2.1
 
+commands:
+  build_and_test:
+    description: "Configure, build and test with cmake"
+    parameters:
+      cpp_compiler:
+        type: "string"
+      c_compiler:
+        type: "string"
+      build_type:
+        type: "enum"
+        enum: [ "Release", "Debug", "RelWithDebInfo" ]
+
+    steps:
+      - checkout
+      - run:
+          command: >
+            cmake -B build 
+            -DCMAKE_CXX_COMPILER=<<parameters.cpp_compiler>>
+            -DCMAKE_C_COMPILER=<<parameters.c_compiler>>
+            -DCMAKE_BUILD_TYPE=<<parameters.build_type>>
+            -S .
+      - run:
+          command: cmake --build build --config <<parameters.build_type>>
+      - run:
+          command: >
+            ctest --build-config <<parameters.build_type>>
+            --output-on-failure
+            --output-junit test-results.xml
+            --test-dir build
+      - store_test_results:
+          path: build/test-results.xml
+
 jobs:
-  linux-gcc20-release:
+  linux-gcc13-debug:
     docker:
       - image: cimg/base:2024.05
+    resource_class: small
     steps:
-      - checkout
       - run:
-          command: >
-            cmake -B build 
-            -DCMAKE_CXX_COMPILER=g++
-            -DCMAKE_C_COMPILER=gcc
-            -DCMAKE_BUILD_TYPE=Release
-            -S .
-      - run:
-          command: cmake --build build --config Release
-      - run:
-          command: ctest --build-config Release
-  
-  linux-gcc20-debug:
+          name: "Download dependencies"
+          run: >
+            sudo apt-get update
+            sudo apt get install -y ninja-build cmake g++-13 libstdc++-13-dev
+      - build_and_test:
+          cpp_compiler: "g++13"
+          c_compiler: "gcc13"
+          build_type: "Debug"
+
+  linux-gcc13-release:
     docker:
       - image: cimg/base:2024.05
+    resource_class: small
     steps:
-      - checkout
       - run:
-          command: >
-            cmake -B build 
-            -DCMAKE_CXX_COMPILER=g++
-            -DCMAKE_C_COMPILER=gcc
-            -DCMAKE_BUILD_TYPE=Debug
-            -S .
-      - run:
-          command: cmake --build build --config Debug
-      - run:
-          command: ctest --build-config Debug
+          name: "Download dependencies"
+          run: >
+            sudo apt-get update
+            sudo apt get install -y ninja-build cmake g++-13 libstdc++-13-dev
+      - build_and_test:
+          cpp_compiler: "g++13"
+          c_compiler: "gcc13"
+          build_type: "Release"
+
 
 workflows:
   build_test:
     jobs:
-      - linux-gcc20-release
+      - linux-gcc13-debug
+      - linux-gcc13-release
 #    macos:
 #      xcode: 15.3.0
