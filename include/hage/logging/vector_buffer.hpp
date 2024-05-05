@@ -21,7 +21,7 @@ class VectorBuffer final : public ByteBuffer
 
   using index_type = std::ptrdiff_t;
 
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
   bool m_hasReader{ false };
   bool m_hasWriter{ false };
 #endif
@@ -34,7 +34,7 @@ class VectorBuffer final : public ByteBuffer
     explicit Reader(VectorBuffer& parent)
       : m_parent(parent)
     {
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
       std::scoped_lock lk(m_parent.m_mtx);
 
       if (m_parent.m_hasReader)
@@ -44,7 +44,7 @@ class VectorBuffer final : public ByteBuffer
 #endif
     }
 
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
     ~Reader() override
     {
       std::scoped_lock lk(m_parent.m_mtx);
@@ -93,7 +93,7 @@ class VectorBuffer final : public ByteBuffer
     explicit Writer(VectorBuffer& parent)
       : m_parent(parent)
     {
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
       std::scoped_lock lk(m_parent.m_mtx);
       if (m_parent.m_hasWriter)
         throw std::runtime_error("Two writers created, only 1 is supported at a time");
@@ -105,7 +105,7 @@ class VectorBuffer final : public ByteBuffer
     ~Writer() override
     {
       std::scoped_lock lk(m_parent.m_mtx);
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
       m_parent.m_hasWriter = false;
 #endif
 

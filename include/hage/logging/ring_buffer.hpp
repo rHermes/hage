@@ -31,7 +31,7 @@ class RingBuffer final : public ByteBuffer
 
   alignas(detail::destructive_interference_size) std::array<std::byte, N + 1> m_buff{};
 
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
   alignas(detail::destructive_interference_size) std::atomic_flag m_hasReader;
   alignas(detail::destructive_interference_size) std::atomic_flag m_hasWriter;
 #endif
@@ -43,7 +43,7 @@ class RingBuffer final : public ByteBuffer
       : m_parent{ parent }
     {
 
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
       if (m_parent.m_hasReader.test_and_set(std::memory_order::acq_rel))
         throw std::runtime_error("We can only have one concurrent reader for RingBuffer");
 #endif
@@ -51,7 +51,7 @@ class RingBuffer final : public ByteBuffer
       m_shadowHead = m_parent.m_head.load(std::memory_order::relaxed);
     }
 
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
     ~Reader() override { m_parent.m_hasReader.clear(std::memory_order::release); }
 #endif
 
@@ -122,7 +122,7 @@ class RingBuffer final : public ByteBuffer
     explicit Writer(RingBuffer& parent)
       : m_parent{ parent }
     {
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
       if (m_parent.m_hasWriter.test_and_set(std::memory_order::acq_rel))
         throw std::runtime_error("We can only have one concurrent writer for RingBuffer");
 #endif
@@ -130,7 +130,7 @@ class RingBuffer final : public ByteBuffer
       m_shadowTail = m_parent.m_tail.load(std::memory_order::relaxed);
     }
 
-#ifdef HAGE_DEBUG
+#if HAGE_DEBUG
     ~Writer() override { m_parent.m_hasWriter.clear(std::memory_order::release); }
 #endif
 

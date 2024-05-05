@@ -241,14 +241,13 @@ TEST_CASE_TEMPLATE("ByteBuffer tests", BufferType, hage::RingBuffer<50>, hage::R
     reader.join();
   }
 }
-
+#if HAGE_DEBUG
 TEST_CASE_TEMPLATE("Single producer, single consumer buffers", BufferType, hage::RingBuffer<4096>, hage::VectorBuffer)
 {
   static_assert(std::derived_from<BufferType, hage::ByteBuffer>);
   BufferType buff;
   hage::ByteBuffer& buffer = buff;
 
-#ifdef HAGE_DEBUG
   SUBCASE("Creating two readers should throw")
   {
     auto reader1 = buffer.get_reader();
@@ -260,8 +259,8 @@ TEST_CASE_TEMPLATE("Single producer, single consumer buffers", BufferType, hage:
     auto writer = buffer.get_writer();
     REQUIRE_THROWS(std::ignore = buffer.get_writer());
   }
-#endif
 }
+#endif
 
 TEST_CASE("RingBuffer")
 {

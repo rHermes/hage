@@ -33,6 +33,7 @@ constexpr bool dependent_false = false;
 #define HAGE_DEBUG true
 inline constexpr bool debug_mode = true;
 #else
+#define HAGE_DEBUG false
 inline constexpr bool debug_mode = false;
 #endif
 }
