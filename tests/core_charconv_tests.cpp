@@ -2,6 +2,8 @@
 
 #include <hage/core/charconv.hpp>
 
+#if __cpp_lib_to_chars >= 201611L
+
 #include <string>
 
 TEST_SUITE_BEGIN("core");
@@ -47,3 +49,5 @@ TEST_CASE("Charconv floats overloads")
 }
 
 TEST_SUITE_END();
+
+#endif
