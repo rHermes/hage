@@ -601,7 +601,8 @@ TEST_CASE("File sink")
   logger.read_log();
 
   // Windows has two digits fewer in it's clock than linux.
-  REQUIRE_GE(fs.bytes_written(), 62);
+  // Macosx has 3 digits fewer than linux.
+  REQUIRE_GE(fs.bytes_written(), 61);
   REQUIRE_LE(fs.bytes_written(), 64);
 }
 

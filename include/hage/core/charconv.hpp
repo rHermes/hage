@@ -1,7 +1,5 @@
 #pragma once
-#include <version>
 
-#if __cpp_lib_to_chars >= 201611L
 #include <charconv>
 #include <concepts>
 #include <span>

@@ -1,9 +1,8 @@
 #include <doctest/doctest.h>
 
+#if __has_include(<charconv>)
+
 #include <hage/core/charconv.hpp>
-
-#if __cpp_lib_to_chars >= 201611L
-
 #include <string>
 
 TEST_SUITE_BEGIN("core");

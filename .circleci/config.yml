@@ -107,18 +107,18 @@ workflows:
       - linux-gcc13:
           matrix:
             parameters:
-              build_type: [ "Release", "Debug", "RelWithDebInfo" ]
+              build_type: [ "Release", "Debug"]
               res_type: ["small", "arm.medium"]
 
       - msvc-win64:
           matrix:
             parameters:
-              build_type: [ "Release", "Debug", "RelWithDebInfo" ]
+              build_type: [ "Release", "Debug"]
 
       - macos-xcode:
           matrix:
             parameters:
-              build_type: [ "Release", "Debug", "RelWithDebInfo" ]
+              build_type: [ "Release", "Debug"]
               res_type: ["macos.x86.medium.gen2"]
               xcode_ver: ["15.3.0"]
 
