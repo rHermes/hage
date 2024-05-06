@@ -3,7 +3,6 @@
 #include <charconv>
 #include <concepts>
 #include <span>
-#include <string_view>
 
 namespace hage {
 
@@ -23,6 +22,7 @@ from_chars(const std::span<const char> data, IntType& value, const int base = 10
   return std::from_chars(std::to_address(data.begin()), std::to_address(data.end()), value, base);
 }
 
+#if defined __cpp_lib_to_chars
 template<std::floating_point FloatType>
 std::from_chars_result
 from_chars(const char* first,
@@ -39,6 +39,6 @@ from_chars(const std::span<const char> data, FloatType& value, const std::chars_
 {
   return std::from_chars(std::to_address(data.begin()), std::to_address(data.end()), value, fmt);
 }
+#endif
 
 } // namespace hage
-#endif

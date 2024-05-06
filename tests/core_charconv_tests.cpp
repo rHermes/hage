@@ -27,6 +27,8 @@ TEST_CASE("Charconv integer overloads")
   }
 }
 
+#if defined __cpp_lib_to_chars
+
 TEST_CASE("Charconv floats overloads")
 {
   const std::string lel = "1.3";
@@ -46,7 +48,7 @@ TEST_CASE("Charconv floats overloads")
     REQUIRE_EQ(out, lelInt);
   }
 }
-
+#endif
 TEST_SUITE_END();
 
 #endif
