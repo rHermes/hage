@@ -1,7 +1,4 @@
 #include <doctest/doctest.h>
-
-#if __has_include(<charconv>)
-
 #include <hage/core/charconv.hpp>
 #include <string>
 
@@ -27,7 +24,7 @@ TEST_CASE("Charconv integer overloads")
   }
 }
 
-#if defined __cpp_lib_to_chars
+#ifndef HAGE_NO_FLOAT_CHARCONV
 
 TEST_CASE("Charconv floats overloads")
 {
@@ -50,5 +47,3 @@ TEST_CASE("Charconv floats overloads")
 }
 #endif
 TEST_SUITE_END();
-
-#endif

@@ -41,7 +41,17 @@ set(LOGGING_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/logging/console_sink.hpp"
 )
 
+
 add_library(hage_core INTERFACE)
+
+# some compilers don't support the float charconvs yet
+try_compile(HAS_FLOAT_CHARCONV SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/compile_tests/float_charconv.cpp
+        CXX_STANDARD 20 CXX_EXTENSIONS OFF)
+
+if(NOT HAS_FLOAT_CHARCONV)
+    target_compile_definitions(hage_core INTERFACE HAGE_NO_FLOAT_CHARCONV=1)
+endif()
+
 
 target_sources(hage_core INTERFACE ${CORE_HEADER_LIST})
 target_include_directories(hage_core INTERFACE ../include)

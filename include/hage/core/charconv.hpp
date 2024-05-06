@@ -22,7 +22,7 @@ from_chars(const std::span<const char> data, IntType& value, const int base = 10
   return std::from_chars(std::to_address(data.begin()), std::to_address(data.end()), value, base);
 }
 
-#if defined __cpp_lib_to_chars
+#ifndef HAGE_NO_FLOAT_CHARCONV
 template<std::floating_point FloatType>
 std::from_chars_result
 from_chars(const char* first,
