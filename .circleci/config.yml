@@ -76,6 +76,31 @@ jobs:
       - store_test_results:
           path: build/test-results.xml
 
+
+  macos-xcode:
+    description: "Windows MSVC c++20 VS2022 x64 Build"
+    parameters:
+      build_type:
+        type: "enum"
+        enum: [ "Release", "Debug", "RelWithDebInfo" ]
+      res_type:
+        type: "enum"
+        enum: ["macos.x86.medium.gen2", "macos.m1.medium.gen1"]
+      xcode_ver:
+        type: "enum"
+        enum: [ "15.4.0", "15.3.0" ]
+    macos:
+      xcode: <<parameters.xcode_ver>>
+    resource_class: <<parameters.res_type>>
+    steps:
+      - run: brew install cmake
+      - run: brew install ninja
+      - checkout
+      - build_and_test:
+          cpp_compiler: "clang++"
+          c_compiler: "clang"
+          build_type: <<parameters.build_type>>
+
 workflows:
   build_test:
     jobs:
@@ -89,6 +114,13 @@ workflows:
           matrix:
             parameters:
               build_type: [ "Release", "Debug", "RelWithDebInfo" ]
+
+      - macos-xcode:
+          matrix:
+            parameters:
+              build_type: [ "Release", "Debug", "RelWithDebInfo" ]
+              res_type: ["macos.x86.medium.gen2"]
+              xcode_ver: ["15.3.0"]
 
 #    macos:
 #      xcode: 15.3.0

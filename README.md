@@ -229,3 +229,19 @@ In the future I'm going to rip that out and instead use exceptions if we cannot 
 - Split this repo, into it's own self contained repository.
   - Make it more clear and targed
   - Will inspire actual usage.
+
+## How to build
+
+
+
+## How to do CI:
+
+I've setup CircleCI, but in order to build with GCC 13, I had to make a custom docker image as the
+`cimg/base` image only supports up to gcc12.
+
+
+This is mostly for my remembering at this point, but here is how to build and push that docker container:
+
+```bash
+docker buildx build . -t rsentinel/gcc-builder --platform linux/amd64,linux/arm64 --push
+```
