@@ -1,5 +1,9 @@
 # Hage
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/circleci/5H4i9qDBtSKj9PnJmod34A/BaVoZYu4QLT3oAPGWpQ67K/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/circleci/5H4i9qDBtSKj9PnJmod34A/BaVoZYu4QLT3oAPGWpQ67K/tree/main)
+
+[![CircleCI](https://dl.circleci.com/insights-snapshot/circleci/5H4i9qDBtSKj9PnJmod34A/BaVoZYu4QLT3oAPGWpQ67K/main/build_test/badge.svg?window=30d)](https://app.circleci.com/insights/circleci/5H4i9qDBtSKj9PnJmod34A/BaVoZYu4QLT3oAPGWpQ67K/workflows/build_test/overview?branch=main&reporting-window=last-30-days&insights-snapshot=true)
+
 This is a repository that I use to try out new ideas or implement features that I think could be useful later.
 
 It is not stable in **ANY WAY SHAPE OR FORM** and any usage is at your own risk.
@@ -10,9 +14,11 @@ It is not stable in **ANY WAY SHAPE OR FORM** and any usage is at your own risk.
 
 This is a core library that is included by most of the other libraries. It includes:
 
-#### Concepts
+#### Concepts and traits
 
 Some concepts that is useful across applications.
+
+- `hage::all_same`: all the types are the same.
 
 #### Lifetime tester
 
@@ -24,6 +30,9 @@ Based on the work in the following paper
 ["A More Composable from_chars"](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2584r0.pdf),
 we implement some of the suggestions there. This makes `std::from_chars` easier to use.
 
+#### zip_view for c++20
+
+TODO(rHermes): This is a zip view for doing sorting.
 
 #### Assert
 
@@ -245,3 +254,9 @@ This is mostly for my remembering at this point, but here is how to build and pu
 ```bash
 docker buildx build . -t rsentinel/gcc-builder --platform linux/amd64,linux/arm64 --push
 ```
+
+
+### Todo
+- Add clang builder image and use that.
+- Move away from github actions?
+  - Not sure if I want this, given that it's free and more testing never hurt.

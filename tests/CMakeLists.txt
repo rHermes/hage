@@ -17,7 +17,8 @@ add_executable(hage_test doctest.cpp
         ring_buffer_tests.cpp
         atomics_tests.cpp
         rotating_file_sink_tests.cpp
-        core_charconv_tests.cpp)
+        core_charconv_tests.cpp
+        core_traits_tests.cpp)
 
 find_package(Threads REQUIRED)
 

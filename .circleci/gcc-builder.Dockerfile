@@ -1,4 +1,5 @@
 FROM gcc:13
+LABEL authors="rhermes"
 
 SHELL ["/bin/bash", "-exo", "pipefail", "-c"]
 
