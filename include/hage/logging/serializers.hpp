@@ -29,7 +29,7 @@ singular_writable_bytes(T& t)
 {
   return std::as_writable_bytes(singular_span(t));
 }
-}
+} // namespace details
 
 template<typename T, typename = void>
 struct Serializer;
@@ -99,4 +99,4 @@ struct Serializer<T, std::enable_if_t<std::is_convertible_v<T, fmt::string_view>
   }
 };
 
-}
+} // namespace hage

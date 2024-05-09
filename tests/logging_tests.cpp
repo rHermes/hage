@@ -46,7 +46,7 @@ struct StringMaker<std::array<std::byte, N>>
     return buf.str().c_str();
   }
 };
-}
+} // namespace doctest
 
 TEST_SUITE_BEGIN("logging");
 

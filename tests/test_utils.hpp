@@ -30,10 +30,7 @@ struct ScopedTempFsEntry final
 {
   std::filesystem::path path;
 
-  explicit ScopedTempFsEntry(const fmt::format_string<std::uint32_t> prefix)
-    : path{ temp_file_name(prefix) }
-  {
-  }
+  explicit ScopedTempFsEntry(const fmt::format_string<std::uint32_t> prefix) : path{ temp_file_name(prefix) } {}
 
   ~ScopedTempFsEntry()
   {
@@ -45,7 +42,7 @@ struct ScopedTempFsEntry final
   }
 };
 
-}
+} // namespace
 
 /**
  * A simple utility class to delete a file on destruction.
@@ -55,4 +52,4 @@ using ScopedDir = ScopedFsEntry<true>;
 
 using ScopedTempFile = ScopedTempFsEntry<false>;
 using ScopedTempDir = ScopedTempFsEntry<true>;
-}
+} // namespace hage::test

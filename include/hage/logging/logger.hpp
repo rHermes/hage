@@ -40,7 +40,7 @@ operator""_fmt()
 {
   return FormatString<S>{};
 }
-}
+} // namespace literals
 
 // Single producer, single consumer logger.
 class Logger
@@ -429,4 +429,4 @@ private:
     return true;
   }
 };
-}
+} // namespace hage

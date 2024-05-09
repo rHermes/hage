@@ -31,8 +31,7 @@ class VectorBuffer final : public ByteBuffer
   class Reader final : public ByteBuffer::Reader
   {
   public:
-    explicit Reader(VectorBuffer& parent)
-      : m_parent(parent)
+    explicit Reader(VectorBuffer& parent) : m_parent(parent)
     {
 #if HAGE_DEBUG
       std::scoped_lock lk(m_parent.m_mtx);
@@ -90,8 +89,7 @@ class VectorBuffer final : public ByteBuffer
   class Writer final : public ByteBuffer::Writer
   {
   public:
-    explicit Writer(VectorBuffer& parent)
-      : m_parent(parent)
+    explicit Writer(VectorBuffer& parent) : m_parent(parent)
     {
 #if HAGE_DEBUG
       std::scoped_lock lk(m_parent.m_mtx);
@@ -145,4 +143,4 @@ public:
   [[nodiscard]] constexpr std::size_t capacity() override { return std::numeric_limits<std::size_t>::max(); }
 };
 
-}
+} // namespace hage

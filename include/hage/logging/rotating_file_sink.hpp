@@ -54,7 +54,7 @@ public:
     [[nodiscard]] bool valid() const
     {
       bool good = !saveDirectory.empty();
-      good      = good && 0 < maxNumber;
+      good = good && 0 < maxNumber;
 
       return good;
     }
@@ -110,4 +110,4 @@ private:
   fmt_string m_format;
   std::vector<std::filesystem::path> m_previous;
 };
-}
+} // namespace hage

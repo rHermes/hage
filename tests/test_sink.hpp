@@ -53,4 +53,4 @@ private:
 
   std::deque<Payload> m_stored;
 };
-}
+} // namespace hage::test

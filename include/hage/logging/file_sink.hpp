@@ -24,4 +24,4 @@ private:
   fmt::ostream m_out;
   std::size_t m_bytesWritten{ 0 };
 };
-}
+} // namespace hage

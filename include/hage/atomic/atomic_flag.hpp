@@ -39,4 +39,4 @@ public:
   void notify_all() noexcept { m_flag.notify_all(); }
 };
 
-}
+} // namespace hage

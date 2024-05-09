@@ -26,4 +26,4 @@ struct LifetimeTester
     return *this;
   }
 };
-}
+} // namespace hage

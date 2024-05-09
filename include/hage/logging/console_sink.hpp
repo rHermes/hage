@@ -10,4 +10,4 @@ public:
   void receive(const LogLevel level, const timestamp_type& ts, const std::string_view line) override;
 };
 
-}
+} // namespace hage

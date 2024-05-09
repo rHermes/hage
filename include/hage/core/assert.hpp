@@ -18,11 +18,11 @@ assert(F&& f, std::string_view cond, std::string_view msg)
     throw std::runtime_error("We got an error during assertion: " + lel + " " + cl);
   }
 }
-}
+} // namespace hage::detail
 
 #if HAGE_DEBUG
-#define HAGE_ASSERT(cond, ...) HAGE_ASSERT_##__VA_OPT__(1)(cond __VA_OPT__(, ) __VA_ARGS__)
-#define HAGE_ASSERT_(cond) HAGE_ASSERT_1(cond, "")
+#define HAGE_ASSERT(cond, ...)   HAGE_ASSERT_##__VA_OPT__(1)(cond __VA_OPT__(, ) __VA_ARGS__)
+#define HAGE_ASSERT_(cond)       HAGE_ASSERT_1(cond, "")
 #define HAGE_ASSERT_1(cond, msg) hage::detail::assert([&] { return (cond); }, #cond, msg)
 #else
 #define HAGE_ASSERT(cond, ...) void()

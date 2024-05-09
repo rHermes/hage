@@ -12,4 +12,4 @@ concept InputRangeOf = std::ranges::input_range<R> && std::convertible_to<std::r
 
 template<typename R, typename V>
 concept CommonRangeOf = std::ranges::common_range<R> && std::convertible_to<std::ranges::range_reference_t<R>, V>;
-}
+} // namespace hage

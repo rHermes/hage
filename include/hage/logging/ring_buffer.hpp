@@ -39,8 +39,7 @@ class RingBuffer final : public ByteBuffer
   class Reader final : public ByteBuffer::Reader
   {
   public:
-    explicit Reader(RingBuffer& parent)
-      : m_parent{ parent }
+    explicit Reader(RingBuffer& parent) : m_parent{ parent }
     {
 
 #if HAGE_DEBUG
@@ -119,8 +118,7 @@ class RingBuffer final : public ByteBuffer
   class Writer final : public ByteBuffer::Writer
   {
   public:
-    explicit Writer(RingBuffer& parent)
-      : m_parent{ parent }
+    explicit Writer(RingBuffer& parent) : m_parent{ parent }
     {
 #if HAGE_DEBUG
       if (m_parent.m_hasWriter.test_and_set(std::memory_order::acq_rel))
@@ -217,4 +215,4 @@ public:
 #pragma warning(pop)
 #endif
 
-}
+} // namespace hage

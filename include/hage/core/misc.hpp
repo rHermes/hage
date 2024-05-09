@@ -14,7 +14,7 @@ inline constexpr std::size_t constructive_interference_size = 64;
 inline constexpr std::size_t destructive_interference_size = 64;
 #endif
 
-}
+} // namespace detail
 
 // For testing and other aplications.
 template<typename... T>
@@ -36,4 +36,4 @@ inline constexpr bool debug_mode = true;
 #define HAGE_DEBUG false
 inline constexpr bool debug_mode = false;
 #endif
-}
+} // namespace hage

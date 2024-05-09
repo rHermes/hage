@@ -25,10 +25,7 @@ public:
   atomic& operator=(const atomic&) = delete;
   atomic& operator=(const atomic&) volatile = delete;
 
-  constexpr atomic(TP p) noexcept
-    : m_atomic(p)
-  {
-  }
+  constexpr atomic(TP p) noexcept : m_atomic(p) {}
 
   operator TP() const noexcept { return load(); }
   operator TP() const volatile noexcept { return load(); }
@@ -284,4 +281,4 @@ public:
   }
 };
 
-}
+} // namespace hage

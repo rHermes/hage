@@ -51,11 +51,7 @@ public:
 class FilterSink final : public Sink
 {
 public:
-  FilterSink(Sink* nextSink, const LogLevel minFilter)
-    : m_nextSink(nextSink)
-    , m_minLevel{ minFilter }
-  {
-  }
+  FilterSink(Sink* nextSink, const LogLevel minFilter) : m_nextSink(nextSink), m_minLevel{ minFilter } {}
   void receive(const LogLevel level, const timestamp_type& ts, const std::string_view line) override
   {
     if (m_minLevel <= level)
@@ -74,15 +70,11 @@ class MultiSink final : public Sink
 {
 public:
   template<CommonRangeOf<Sink*> Range>
-  explicit MultiSink(Range sinks)
-    : m_sinks(std::ranges::cbegin(sinks), std::ranges::cend(sinks))
+  explicit MultiSink(Range sinks) : m_sinks(std::ranges::cbegin(sinks), std::ranges::cend(sinks))
   {
   }
 
-  MultiSink(std::initializer_list<Sink*> sinks)
-    : m_sinks(std::move(sinks))
-  {
-  }
+  MultiSink(std::initializer_list<Sink*> sinks) : m_sinks(std::move(sinks)) {}
 
   void receive(const LogLevel level, const timestamp_type& ts, const std::string_view line) override
   {
@@ -95,4 +87,4 @@ private:
   std::vector<Sink*> m_sinks;
 };
 
-}
+} // namespace hage

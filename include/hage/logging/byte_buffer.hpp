@@ -35,4 +35,4 @@ public:
   [[nodiscard]] virtual std::size_t capacity() = 0;
 };
 
-}
+} // namespace hage

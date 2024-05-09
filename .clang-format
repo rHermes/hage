@@ -1,8 +1,8 @@
 ---
 Language:        Cpp
 BasedOnStyle: Mozilla
-AlignConsecutiveAssignments:
-  Enabled: true
+#AlignConsecutiveAssignments:
+#  Enabled: true
 AlignConsecutiveMacros:
   Enabled: true
 AlignConsecutiveShortCaseStatements:
