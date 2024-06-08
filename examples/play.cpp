@@ -1,23 +1,18 @@
+#include <future>
 #include <iostream>
 
-class C
+int
+small_comp(const int i)
 {
-public:
-  void foo() const& { std::cout << "foo() const&\n"; }
-  void foo() && { std::cout << "foo() &&\n"; }
-  void foo() & { std::cout << "foo() &\n"; }
-  void foo() const&& { std::cout << "foo() const&&\n"; }
-};
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+  return i * 2;
+}
 
 int
 main()
 {
-  C x;
-  x.foo();            // calls foo() &
-  C{}.foo();          // calls foo() &&
-  std::move(x).foo(); // calls foo() &&
-
-  const C cx;
-  cx.foo();            // calls foo() const&
-  std::move(cx).foo(); // calls foo() const&&
+  std::future<int> theAnswer = std::async(small_comp, 10);
+  std::cout << "Here we are after starting that task.\n";
+  std::cout << "And we finished now: " << theAnswer.get() << '\n';
+  return 0;
 }

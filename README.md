@@ -39,11 +39,17 @@ TODO(rHermes): This is a zip view for doing sorting.
 This is a simple assert library. It's made so that I could learn about the preprocessor. The main
 need here is to be able to turn it off during release.
 
+
+#### Forward Declared Storage for Fast pimpl
+
+This class helps with implementing the "Fast Pimpl" idiom. It's currently under development
+
 #### TODO
 
 - Implement better documentation. For this libraries to be useful, I will need to have good documentation.
 - Think a bit about what kind of dependencies we will require.
 - Figure out how to do cmake install.
+- Implement policy types for `ForwardDeclaredStorage`
 - Implement all the features from https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2584r0.pdf
 
 ### Data structures

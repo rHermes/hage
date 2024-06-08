@@ -18,7 +18,10 @@ add_executable(hage_test doctest.cpp
         atomics_tests.cpp
         rotating_file_sink_tests.cpp
         core_charconv_tests.cpp
-        core_traits_tests.cpp)
+        core_traits_tests.cpp
+        fast_pimpl_test.cpp
+        fast_pimpl_test.hpp
+        forward_declared_storage_tests.cpp)
 
 find_package(Threads REQUIRED)
 
