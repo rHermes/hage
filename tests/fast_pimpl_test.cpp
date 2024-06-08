@@ -1,7 +1,3 @@
-//
-// Created by rhermes on 2024-06-08.
-//
-
 #include "fast_pimpl_test.hpp"
 
 #include <string>
