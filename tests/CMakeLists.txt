@@ -21,7 +21,8 @@ add_executable(hage_test doctest.cpp
         core_traits_tests.cpp
         fast_pimpl_test.cpp
         fast_pimpl_test.hpp
-        forward_declared_storage_tests.cpp)
+        forward_declared_storage_tests.cpp
+        avl_tree_tests.cpp)
 
 find_package(Threads REQUIRED)
 
@@ -56,7 +57,7 @@ endif ()
 
 # target_compile_definitions(hage_test PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS)
 
-target_link_libraries(hage_test PRIVATE hage_logging hage_atomic doctest::doctest
+target_link_libraries(hage_test PRIVATE hage_logging hage_atomic doctest::doctest hage_data_structures
     Threads::Threads)
 # add_test(NAME hage_test_test COMMAND hage_test)
 

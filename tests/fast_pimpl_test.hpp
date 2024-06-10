@@ -25,6 +25,7 @@ private:
 #else
   hage::ForwardDeclaredStorage<details::FastPimplTestImpl, 40, 8> m_impl;
 #endif
+
 public:
   FastPimplTest();
   ~FastPimplTest();

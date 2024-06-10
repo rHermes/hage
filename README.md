@@ -61,6 +61,28 @@ Planned datastructures:
 - Index based linked list, with a skip list
 - Interval map, built on top of
 
+#### AVLTree
+
+An AVLTree implementation, currently in the process of being completed. Features are:
+
+- Full iterator support
+- Node pooling
+- Supports most of the same functionality as `std::map`
+
+
+#### TODO
+
+##### AVLTREE
+- Add `generation` tag to all nodes in debug mode, and check this tag when accessing through
+an iterator, to detect dangling pointers!
+- Add examples and tests for this
+
+
+##### General
+- Also implement a redblack tree
+- Add some benchmarks for all trees
+- Add a B-Tree?
+
 ### Utility library
 
 This is not implemented yet, but here are some components I want:

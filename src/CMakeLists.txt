@@ -19,6 +19,10 @@ set(CORE_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/core/forward_declared_storage.hpp"
 )
 
+set(DATA_STRUCTURES_HEADER_LIST
+        "${hage_SOURCE_DIR}/include/hage/ds/avl_tree.hpp"
+)
+
 
 set(ATOMIC_HEADER_LIST
         "${hage_SOURCE_DIR}/include/hage/atomic/atomic.hpp"
@@ -67,6 +71,15 @@ target_sources(hage_atomic INTERFACE
 
 target_include_directories(hage_atomic INTERFACE ../include)
 
+add_library(hage_data_structures INTERFACE)
+
+target_sources(hage_data_structures INTERFACE
+        ${DATA_STRUCTURES_HEADER_LIST}
+)
+
+target_include_directories(hage_data_structures INTERFACE ../include)
+target_link_libraries(hage_data_structures INTERFACE hage_core)
+
 add_library(hage_logging ${LOGGING_HEADER_LIST}
         logging/console_sink.cpp
         logging/file_sink.cpp
@@ -76,7 +89,7 @@ add_library(hage_logging ${LOGGING_HEADER_LIST}
 target_include_directories(hage_logging PUBLIC ../include)
 target_link_libraries(hage_logging PUBLIC fmt::fmt hage_atomic hage_core)
 
-foreach (target_var IN ITEMS hage_atomic hage_logging hage_core)
+foreach (target_var IN ITEMS hage_atomic hage_logging hage_core hage_data_structures)
     get_target_property(target_type ${target_var} TYPE)
 
     if (target_type STREQUAL "INTERFACE_LIBRARY")
