@@ -24,7 +24,7 @@ template<typename T, std::size_t Size, std::size_t Alignment>
 class ForwardDeclaredStorage
 {
 private:
-  alignas(Alignment) std::byte m_data[Size];
+  alignas(Alignment) std::byte m_data[Size]{};
 
   constexpr T& get() { return *std::launder(reinterpret_cast<T*>(&m_data)); }
   constexpr const T& get() const { return *std::launder(reinterpret_cast<const T*>(&m_data)); }
@@ -50,7 +50,7 @@ public:
   }
   constexpr ForwardDeclaredStorage(const ForwardDeclaredStorage& other) { ::new (m_data) T(other.get()); }
 
-  constexpr ForwardDeclaredStorage(const T& other) { ::new (m_data) T(other); }
+  explicit constexpr ForwardDeclaredStorage(const T& other) { ::new (m_data) T(other); }
   constexpr explicit ForwardDeclaredStorage(T&& other) noexcept(std::is_nothrow_move_constructible_v<T>)
   {
     ::new (m_data) T(std::move(other));

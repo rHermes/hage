@@ -76,6 +76,13 @@ An AVLTree implementation, currently in the process of being completed. Features
 - Add `generation` tag to all nodes in debug mode, and check this tag when accessing through
 an iterator, to detect dangling pointers!
 - Add examples and tests for this
+- Add allocator support.
+- Add support for erasing!
+- Add some statistics?
+- Add support for custom comperators
+- Add support for multimap?
+- Add support for sets also, that doesn't take up extra space.
+  - This would be a good generalization, we can just vary the node type.
 
 
 ##### General

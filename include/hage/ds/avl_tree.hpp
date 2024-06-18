@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 namespace hage::ds {
@@ -119,14 +120,22 @@ private:
 
     friend constexpr bool operator!=(const Iterator& lhs, const Iterator& rhs) { return !(lhs == rhs); }
 
+    // Prefix increment
+    Iterator& operator++()
+    {
+      if (m_id == m_tree->m_end) {
+        throw std::runtime_error("Invalid iterator usage, trying to increment beyond end");
+      }
+    }
+
   private:
     friend class AVLTree;
 
     AVLTree* m_tree{ nullptr };
     node_id_type m_id{ -1 };
 
-    // TODO(rHermes):
-    // create an "end" iterator, that doesn't take up a node.
+    // TODO(rHermes): create an "end" iterator, that doesn't take up a node. This could be done if we track the
+    // iterators a bit differently.
   };
 
   [[nodiscard]] constexpr Iterator make_iterator(node_id_type id) { return Iterator{ this, id }; }
