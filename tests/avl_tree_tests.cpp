@@ -27,6 +27,61 @@ TEST_CASE("Simple avl tests")
 
   REQUIRE_UNARY(tree.contains(100));
   REQUIRE_UNARY_FALSE(tree.contains(200));
+
+  SUBCASE("We should be able to use ++ to iterate")
+  {
+    auto it = tree.find(10);
+    REQUIRE_EQ(it->key(), 10);
+    REQUIRE_EQ(it->value(), 23);
+
+    it++;
+
+    REQUIRE_EQ(it->key(), 100);
+    REQUIRE_EQ(it->value(), 10);
+
+    ++it;
+
+    REQUIRE_EQ(it, tree.end());
+  }
+
+  SUBCASE("We should be able to use -- to iteratte")
+  {
+    auto it = tree.find(10);
+    REQUIRE_EQ(it->key(), 10);
+    REQUIRE_EQ(it->value(), 23);
+
+    REQUIRE_EQ((it++)->key(), 10);
+    REQUIRE_EQ(it->key(), 100);
+    REQUIRE_EQ(it->value(), 10);
+  }
+}
+
+TEST_CASE("AVL Tree iterator tests")
+{
+  ds::AVLTree<int, int> tree;
+
+  constexpr int N = 10;
+  // We have to insert a 100 elements.
+  for (int i = 0; i < N; i++) {
+    auto [it, inserted] = tree.try_emplace(i, N - i);
+    REQUIRE_UNARY(inserted);
+
+    auto itEnd = tree.end();
+    auto itPrev = std::prev(itEnd);
+    REQUIRE_EQ(it, itPrev);
+  }
+
+  SUBCASE("Forward iteration should work")
+  {
+    auto it = tree.begin();
+    int i = 0;
+    while (it != tree.end()) {
+      REQUIRE_EQ(it->key(), i);
+      REQUIRE_EQ(it->value(), N - i);
+      it++;
+      i++;
+    }
+  }
 }
 
 TEST_SUITE_END();

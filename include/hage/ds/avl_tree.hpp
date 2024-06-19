@@ -117,15 +117,78 @@ private:
     {
       return lhs.m_tree == rhs.m_tree && lhs.m_id == rhs.m_id;
     }
-
     friend constexpr bool operator!=(const Iterator& lhs, const Iterator& rhs) { return !(lhs == rhs); }
 
-    // Prefix increment
-    Iterator& operator++()
+    constexpr Iterator operator++(int)
     {
+      // BUG(rHermes): Should we return the value it had before iterating?
+      auto it = *this;
+      ++(*this);
+      return it;
+    }
+    // Prefix increment
+    constexpr Iterator& operator++()
+    {
+      const auto& nodes = m_tree->m_nodes;
+
       if (m_id == m_tree->m_end) {
         throw std::runtime_error("Invalid iterator usage, trying to increment beyond end");
       }
+
+      if (m_id == nodes[m_tree->m_end].m_parent) {
+        m_id = m_tree->m_end;
+        return *this;
+      }
+
+      // ok, let's be a bit smart here. We want to go to the right. There are two ways this will go.
+      // Either we are going up, or we are going down.
+      if (nodes[m_id].m_right == -1) {
+        while (nodes[nodes[m_id].m_parent].m_right == m_id) {
+          m_id = nodes[m_id].m_parent;
+        }
+      } else {
+        m_id = nodes[m_id].m_right;
+        while (nodes[m_id].m_left != -1) {
+          m_id = nodes[m_id].m_left;
+        }
+      }
+
+      return *this;
+    }
+
+    constexpr Iterator operator--(int)
+    {
+      auto it = *this;
+      --(*this);
+      return it;
+    }
+
+    constexpr Iterator& operator--()
+    {
+      const auto& nodes = m_tree->m_nodes;
+
+      if (m_id == m_tree->m_begin) {
+        throw std::runtime_error("We tried to decrement a begin iterator");
+      }
+
+      if (m_id == m_tree->m_end) {
+        m_id = nodes[m_id].m_parent;
+      }
+
+      if (nodes[m_id].m_left == -1) {
+
+        // We need to go up again, until we are on the right side.
+        while (nodes[nodes[m_id].m_parent].m_left == m_id) {
+          m_id = nodes[m_id].m_parent;
+        }
+      } else {
+        m_id = nodes[m_id].m_left;
+        while (nodes[m_id].m_right != -1) {
+          m_id = nodes[m_id].m_right;
+        }
+      }
+
+      return *this;
     }
 
   private:
