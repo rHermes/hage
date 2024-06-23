@@ -44,7 +44,7 @@ TEST_CASE("Simple avl tests")
     REQUIRE_EQ(it, tree.end());
   }
 
-  SUBCASE("We should be able to use -- to iteratte")
+  SUBCASE("We should be able to use -- to iterate")
   {
     auto it = tree.find(10);
     REQUIRE_EQ(it->key(), 10);
@@ -53,6 +53,16 @@ TEST_CASE("Simple avl tests")
     REQUIRE_EQ((it++)->key(), 10);
     REQUIRE_EQ(it->key(), 100);
     REQUIRE_EQ(it->value(), 10);
+  }
+
+  SUBCASE("Clearing should return all nodes to zero")
+  {
+    tree.clear();
+    REQUIRE_EQ(tree.size(), 0);
+
+    // inserting should work again
+    auto res = tree.try_emplace(10, 0xf001);
+    REQUIRE_UNARY(res.second);
   }
 }
 
@@ -93,11 +103,35 @@ TEST_CASE("AVL Tree iterator tests")
     }
   }
 
+  SUBCASE("Const Forward iteration should work")
+  {
+    auto it = tree.cbegin();
+    int i = 0;
+    while (it != tree.cend()) {
+      REQUIRE_EQ(it->key(), i);
+      REQUIRE_EQ(it->value(), N - i);
+      it++;
+      i++;
+    }
+  }
+
   SUBCASE("Reverse iteration should work")
   {
     auto it = tree.rbegin();
     int i = N - 1;
     while (it != tree.rend()) {
+      REQUIRE_EQ(it->key(), i);
+      REQUIRE_EQ(it->value(), N - i);
+      it++;
+      i--;
+    }
+  }
+
+  SUBCASE("Const Reverse iteration should work")
+  {
+    auto it = tree.crbegin();
+    int i = N - 1;
+    while (it != tree.crend()) {
       REQUIRE_EQ(it->key(), i);
       REQUIRE_EQ(it->value(), N - i);
       it++;
