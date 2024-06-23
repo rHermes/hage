@@ -60,6 +60,16 @@ TEST_CASE("AVL Tree iterator tests")
 {
   ds::AVLTree<int, int> tree;
 
+  SUBCASE("Forward iterator has to be a bidirectional iterator")
+  {
+    REQUIRE_UNARY(std::bidirectional_iterator<decltype(tree)::iterator>);
+  }
+
+  SUBCASE("Reverse iterator has to be a bidirectional iterator")
+  {
+    REQUIRE_UNARY(std::bidirectional_iterator<decltype(tree)::reverse_iterator>);
+  }
+
   constexpr int N = 10;
   // We have to insert a 100 elements.
   for (int i = 0; i < N; i++) {
@@ -80,6 +90,18 @@ TEST_CASE("AVL Tree iterator tests")
       REQUIRE_EQ(it->value(), N - i);
       it++;
       i++;
+    }
+  }
+
+  SUBCASE("Reverse iteration should work")
+  {
+    auto it = tree.rbegin();
+    int i = N - 1;
+    while (it != tree.rend()) {
+      REQUIRE_EQ(it->key(), i);
+      REQUIRE_EQ(it->value(), N - i);
+      it++;
+      i--;
     }
   }
 }

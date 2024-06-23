@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iterator>
 #include <stdexcept>
 #include <vector>
 
@@ -12,8 +13,9 @@ template<typename Key, typename Value>
 class AVLTree
 {
 private:
+  template<bool IsConst>
   class Iterator;
-  class ConstIterator;
+
   class Node;
 
   using node_id_type = std::int32_t;
@@ -21,8 +23,10 @@ private:
 public:
   using value_type = Value;
   using size_type = std::size_t;
-  using iterator = Iterator;
-  using const_iterator = ConstIterator;
+  using iterator = Iterator<false>;
+  using const_iterator = Iterator<true>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   AVLTree()
   {
@@ -31,7 +35,7 @@ public:
   }
 
   template<typename K, typename... Args>
-  constexpr std::pair<Iterator, bool> try_emplace(K&& key, Args&&... args)
+  constexpr std::pair<iterator, bool> try_emplace(K&& key, Args&&... args)
   {
     if (m_root == -1) {
       m_root = get_node(std::forward<K>(key), Value{ std::forward<Args>(args)... });
@@ -39,11 +43,11 @@ public:
       m_nodes[m_end].m_parent = m_root;
 
       m_size++;
-      return { make_iterator(m_root), true };
+      return { make_iterator<false>(m_root), true };
     }
 
     const auto [id, inserted] = internal_try_emplace(m_root, std::forward<K>(key), std::forward<Args>(args)...);
-    return { make_iterator(id), inserted };
+    return { make_iterator<false>(id), inserted };
   }
 
   [[nodiscard]] constexpr iterator find(const Key& key)
@@ -52,12 +56,45 @@ public:
     if (id == -1) {
       return end();
     } else {
-      return make_iterator(id);
+      return make_iterator<false>(id);
     }
   }
 
-  [[nodiscard]] constexpr iterator end() noexcept { return make_iterator(m_end); }
-  [[nodiscard]] constexpr iterator begin() noexcept { return make_iterator(m_begin); }
+  [[nodiscard]] constexpr iterator end() noexcept { return make_iterator<false>(m_end); }
+  [[nodiscard]] constexpr iterator begin() noexcept { return make_iterator<false>(m_begin); }
+
+  [[nodiscard]] constexpr const_iterator end() const noexcept { return make_iterator<true>(m_end); }
+  [[nodiscard]] constexpr const_iterator begin() const noexcept { return make_iterator<true>(m_begin); }
+
+  [[nodiscard]] constexpr const_iterator cend() const noexcept { return make_iterator<true>(m_end); }
+  [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return make_iterator<true>(m_begin); }
+
+  [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
+  {
+    return std::make_reverse_iterator(make_iterator<false>(m_end));
+  }
+  [[nodiscard]] constexpr reverse_iterator rend() noexcept
+  {
+    return std::make_reverse_iterator(make_iterator<false>(m_begin));
+  }
+
+  [[nodiscard]] constexpr reverse_iterator rbegin() const noexcept
+  {
+    return std::make_reverse_iterator(make_iterator<true>(m_end));
+  }
+  [[nodiscard]] constexpr reverse_iterator rend() const noexcept
+  {
+    return std::make_reverse_iterator(make_iterator<true>(m_begin));
+  }
+
+  [[nodiscard]] constexpr reverse_iterator crbegin() const noexcept
+  {
+    return std::make_reverse_iterator(make_iterator<true>(m_end));
+  }
+  [[nodiscard]] constexpr reverse_iterator crend() const noexcept
+  {
+    return std::make_reverse_iterator(make_iterator<true>(m_begin));
+  }
 
   [[nodiscard]] constexpr bool contains(const Key& key) const { return internal_find(m_root, key) != -1; }
 
@@ -87,8 +124,9 @@ private:
     {
     }
 
-    const Key& key() const { return m_key; }
-    Value& value() { return m_value; }
+    [[nodiscard]] constexpr const Key& key() const { return m_key; }
+    [[nodiscard]] constexpr Value& value() { return m_value; }
+    [[nodiscard]] constexpr const Value& value() const { return m_value; }
   };
 
   std::size_t m_size{ 0 };
@@ -99,19 +137,24 @@ private:
   node_id_type m_begin{ -1 };
   node_id_type m_end{ -1 };
 
+  template<bool IsConst>
   class Iterator
   {
+  private:
+    using node_type = std::conditional_t<IsConst, const Node, Node>;
+
   public:
     using iterator_category = std::bidirectional_iterator_tag;
-    using value_type = Node;
+    using value_type = node_type;
     using difference_type = std::int32_t;
-    using pointer = Node*;
-    using reference = Node&;
+    using pointer = node_type*;
+    using reference = node_type&;
 
+    Iterator() = default;
     Iterator(AVLTree* tree, node_id_type id) : m_tree{ tree }, m_id{ id } {}
 
     constexpr reference operator*() const { return m_tree->m_nodes[m_id]; }
-    constexpr pointer operator->() { return &m_tree->m_nodes[m_id]; }
+    constexpr pointer operator->() const { return &m_tree->m_nodes[m_id]; }
 
     friend constexpr bool operator==(const Iterator& lhs, const Iterator& rhs)
     {
@@ -123,7 +166,7 @@ private:
     {
       // BUG(rHermes): Should we return the value it had before iterating?
       auto it = *this;
-      ++(*this);
+      this->operator++();
       return it;
     }
     // Prefix increment
@@ -143,7 +186,10 @@ private:
       // ok, let's be a bit smart here. We want to go to the right. There are two ways this will go.
       // Either we are going up, or we are going down.
       if (nodes[m_id].m_right == -1) {
-        while (nodes[nodes[m_id].m_parent].m_right == m_id) {
+        auto prev = m_id;
+        m_id = nodes[m_id].m_parent;
+        while (nodes[m_id].m_right == prev) {
+          prev = m_id;
           m_id = nodes[m_id].m_parent;
         }
       } else {
@@ -173,12 +219,15 @@ private:
 
       if (m_id == m_tree->m_end) {
         m_id = nodes[m_id].m_parent;
+        return *this;
       }
 
       if (nodes[m_id].m_left == -1) {
-
         // We need to go up again, until we are on the right side.
-        while (nodes[nodes[m_id].m_parent].m_left == m_id) {
+        auto prev = m_id;
+        m_id = nodes[m_id].m_parent;
+        while (nodes[m_id].m_left == prev) {
+          prev = m_id;
           m_id = nodes[m_id].m_parent;
         }
       } else {
@@ -201,7 +250,11 @@ private:
     // iterators a bit differently.
   };
 
-  [[nodiscard]] constexpr Iterator make_iterator(node_id_type id) { return Iterator{ this, id }; }
+  template<bool IsConst>
+  [[nodiscard]] constexpr Iterator<IsConst> make_iterator(node_id_type id)
+  {
+    return Iterator<IsConst>{ this, id };
+  }
 
   template<typename K, typename V>
   [[nodiscard]] constexpr node_id_type get_node(K&& key, V&& value)
