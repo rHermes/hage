@@ -59,7 +59,8 @@ This library includes datastructures that I used from time to time.
 Planned datastructures:
 - Slotmap implementation, take inspiration from rust
 - Index based linked list, with a skip list
-- Interval map, built on top of
+- Interval map, built on top of a map structure.
+- A skip list
 
 #### AVLTree
 
@@ -75,20 +76,29 @@ An AVLTree implementation, currently in the process of being completed. Features
 ##### AVLTREE
 - Add `generation` tag to all nodes in debug mode, and check this tag when accessing through
 an iterator, to detect dangling pointers!
+- Add check in debug mode, that the iterator belongs to this tree.
+  - Just a simple check to see if `m_tree` is equal to `this`.
+  - Actually, according to the standard library, iterators must remain valid.
+  - I can do this by introducing a "tree_id" which I get from a thread safe function,
+ and compare it to that. This get 90% of the effect for 10% of the effort.
 - Add examples and tests for this
 - Add allocator support.
 - Add support for erasing!
 - Add some statistics?
 - Add support for custom comperators
 - Add support for multimap?
+  - Look at how boost does this
 - Add support for sets also, that doesn't take up extra space.
   - This would be a good generalization, we can just vary the node type.
+- Figure out a way to remove the need for a default constructable value type.
 
 
 ##### General
 - Also implement a redblack tree
 - Add some benchmarks for all trees
 - Add a B-Tree?
+- Add WAVL tree?
+- Add 2-3 trees?
 
 ### Utility library
 

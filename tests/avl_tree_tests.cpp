@@ -2,6 +2,12 @@
 
 #include <hage/ds/avl_tree.hpp>
 
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <random>
+
 using namespace hage;
 
 TEST_SUITE_BEGIN("data_structures");
@@ -55,6 +61,18 @@ TEST_CASE("Simple avl tests")
     REQUIRE_EQ(it->value(), 10);
   }
 
+  SUBCASE("Erase should work")
+  {
+    auto it = tree.find(10);
+    REQUIRE_NE(it, tree.end());
+    REQUIRE_UNARY(tree.contains(10));
+
+    auto it2 = tree.erase(it);
+    REQUIRE_NE(it2, tree.end());
+    REQUIRE_EQ(it2->key(), 100);
+    REQUIRE_UNARY_FALSE(tree.contains(10));
+  }
+
   SUBCASE("Clearing should return all nodes to zero")
   {
     tree.clear();
@@ -80,7 +98,7 @@ TEST_CASE("AVL Tree iterator tests")
     REQUIRE_UNARY(std::bidirectional_iterator<decltype(tree)::reverse_iterator>);
   }
 
-  constexpr int N = 10;
+  constexpr int N = 100;
   // We have to insert a 100 elements.
   for (int i = 0; i < N; i++) {
     auto [it, inserted] = tree.try_emplace(i, N - i);
@@ -136,6 +154,58 @@ TEST_CASE("AVL Tree iterator tests")
       REQUIRE_EQ(it->value(), N - i);
       it++;
       i--;
+    }
+  }
+}
+
+TEST_CASE("AVL erase tests")
+{
+  ds::AVLTree<int, int> tree;
+  std::map<int, int> mirror;
+
+  constexpr int N = 20;
+  // We have to insert a 100 elements.
+  for (int i = 0; i < N; i++) {
+    auto [it, inserted] = tree.try_emplace(i, N - i);
+    REQUIRE_UNARY(inserted);
+
+    mirror.emplace(i, N - i);
+
+    auto itEnd = tree.end();
+    auto itPrev = std::prev(itEnd);
+    REQUIRE_EQ(it, itPrev);
+  }
+
+  // Ok, here we go
+  std::vector<int> toDelete(N);
+  std::iota(toDelete.begin(), toDelete.end(), 0);
+
+  SUBCASE("Erasing randomly should work")
+  {
+    std::ranlux48 rng{ 24 };
+    std::ranges::shuffle(toDelete, rng);
+    for (auto toDel : toDelete) {
+      INFO("Doing: ", toDel);
+
+      std::cout << "Going to delete: " << toDel << "\n";
+      std::cout << tree.print_dot_tree();
+
+      auto it1 = tree.find(toDel);
+      REQUIRE_NE(it1, tree.end());
+      auto it2 = mirror.find(toDel);
+
+      REQUIRE_EQ(it1->key(), it2->first);
+      REQUIRE_EQ(it1->value(), it2->second);
+
+      auto it3 = tree.erase(it1);
+      auto it4 = mirror.erase(it2);
+
+      if (it3 == tree.end()) {
+        REQUIRE_EQ(it4, mirror.end());
+      } else {
+        REQUIRE_EQ(it3->key(), it4->first);
+        REQUIRE_EQ(it3->value(), it4->second);
+      }
     }
   }
 }
