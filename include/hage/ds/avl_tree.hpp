@@ -5,6 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace hage::ds {
@@ -75,7 +76,6 @@ public:
   constexpr iterator erase(iterator pos)
   {
     auto id = internal_erase(pos.m_id);
-    // std::ranges::copy_backward
     return make_iterator(id);
   }
 
@@ -640,22 +640,6 @@ private:
 
   [[nodiscard]] constexpr node_id_type internal_erase(const node_id_type root)
   {
-    auto shiftNodes = [&](const node_id_type orig, const node_id_type replace) {
-      auto parent = m_nodes[orig].m_parent;
-      if (parent == -1) {
-        m_root = replace;
-      } else if (orig == m_nodes[parent].m_left) {
-        m_nodes[parent].m_left = replace;
-      } else {
-        m_nodes[parent].m_right = replace;
-      }
-
-      if (replace != -1) {
-        m_nodes[replace].m_parent = parent;
-      }
-
-      return replace;
-    };
 
     const auto retValue = next_node(root);
 
@@ -669,45 +653,83 @@ private:
 
     // ok, we are going to
 
-    node_id_type newRoot = -1;
+    node_id_type newRoot = root;
 
+    // Ok, but it's here that the sausage will get made.
+    int firstNudge = 0;
+    bool lateCleanup = false;
     auto& node = m_nodes[root];
-    if (node.m_left == -1) {
-      newRoot = shiftNodes(root, node.m_right);
+    if (node.m_left == -1 && node.m_right == -1) {
+      lateCleanup = true;
+    } else if (node.m_left == -1) {
+      newRoot = node.m_right;
+      auto root_right = node.m_right;
+      if (node.m_parent == -1) {
+        m_root = root_right;
+      } else {
+        if (m_nodes[node.m_parent].m_left == root) {
+          m_nodes[node.m_parent].m_left = root_right;
+          firstNudge = -1;
+        } else {
+          m_nodes[node.m_parent].m_right = root_right;
+          firstNudge = 1;
+        }
+      }
+
+      m_nodes[newRoot].m_parent = std::exchange(node.m_parent, newRoot);
     } else if (node.m_right == -1) {
-      newRoot = shiftNodes(root, node.m_left);
+      newRoot = node.m_left;
+
+      auto root_left = node.m_left;
+      if (node.m_parent == -1) {
+        m_root = root_left;
+      } else {
+        if (m_nodes[node.m_parent].m_left == root) {
+          m_nodes[node.m_parent].m_left = root_left;
+          firstNudge = -1;
+        } else {
+          m_nodes[node.m_parent].m_right = root_left;
+          firstNudge = 1;
+        }
+      }
+
+      m_nodes[newRoot].m_parent = std::exchange(node.m_parent, newRoot);
     } else {
       // This is where we need change also internal balancing nodes.
-
       auto next = retValue;
-      // ah, first we remove ourselves from this spot in the tree,
-      // and then we move ourselves into the tree.
-      if (m_nodes[next].m_parent != root) {
-        auto par = m_nodes[next].m_parent;
-        if (par != m_end) {
-          m_nodes[par].m_balance++;
-        }
+      auto& nextNode = m_nodes[next];
 
-        // This is correct, we need to run up a rebalance from this spot, until you reach the parent then?
+      // ok, we have two children, we will do a bit of a meme here.
+      nextNode.m_left = std::exchange(node.m_left, -1);
+      m_nodes[nextNode.m_left].m_parent = next;
 
-        shiftNodes(next, m_nodes[next].m_right);
-        m_nodes[next].m_right = node.m_right;
-        m_nodes[node.m_right].m_parent = next;
+      nextNode.m_balance = std::exchange(node.m_balance, 0);
+
+      if (node.m_parent == -1) {
+        m_root = next;
       } else {
-        // hey
-        std::ignore = 1;
+        if (m_nodes[node.m_parent].m_left == root) {
+          m_nodes[node.m_parent].m_left = next;
+        } else {
+          m_nodes[node.m_parent].m_right = next;
+        }
       }
-      newRoot = shiftNodes(root, next);
-      m_nodes[next].m_left = node.m_left;
-      m_nodes[node.m_left].m_parent = next;
-    }
 
-    // remove the root node.
-    free_node(root);
-    --m_size;
+      if (node.m_right != next) {
+        nextNode.m_right = std::exchange(node.m_right, -1);
+        m_nodes[nextNode.m_right].m_parent = next;
 
-    if (newRoot == -1) {
-      return retValue;
+        if (m_nodes[nextNode.m_parent].m_left == next) {
+          m_nodes[nextNode.m_parent].m_left = -1;
+        } else {
+          m_nodes[nextNode.m_parent].m_right = -1;
+        }
+        nextNode.m_parent = std::exchange(node.m_parent, nextNode.m_parent);
+
+      } else {
+        firstNudge = 1;
+        nextNode.m_parent = std::exchange(node.m_parent, next);
+      }
     }
 
     // OK, time to rebalance the tree, let's hope I can do it. With wikipedia as my guide it can work.
@@ -717,26 +739,8 @@ private:
       int b = 0;
 
       // BF(X) is not yet updated.
-      if (newRoot == m_nodes[parentNode].m_left) { // it's the left tree which decreases
-        if (0 < m_nodes[parentNode].m_balance) {   // X is right heavy
-          // THe temporary BF(X) == +2 amd we need to rebalance
-          // we need to rebalance
-          auto Z = m_nodes[parentNode].m_right;
-          b = m_nodes[Z].m_balance;
-          if (b < 0) {
-            newRoot = rotate_right_left(parentNode, Z);
-          } else {
-            newRoot = rotate_left(parentNode, Z);
-          }
-        } else {
-          auto pre = m_nodes[parentNode].m_balance++;
-          if (pre == 0)
-            break;
-
-          newRoot = parentNode;
-          continue;
-        }
-      } else {
+      if (firstNudge == 1 || newRoot == m_nodes[parentNode].m_right) { // it's the right tree which decreases
+        firstNudge = 0;
         // We are in the right subtree
         if (m_nodes[parentNode].m_balance < 0) {
           // parentNode is left heavy and we need to rebalance
@@ -750,6 +754,27 @@ private:
           }
         } else {
           auto pre = m_nodes[parentNode].m_balance--;
+          if (pre == 0)
+            break;
+
+          newRoot = parentNode;
+          continue;
+        }
+      } else {
+        firstNudge = 0;
+
+        if (0 < m_nodes[parentNode].m_balance) { // X is right heavy
+          // THe temporary BF(X) == +2 amd we need to rebalance
+          // we need to rebalance
+          auto Z = m_nodes[parentNode].m_right;
+          b = m_nodes[Z].m_balance;
+          if (b < 0) {
+            newRoot = rotate_right_left(parentNode, Z);
+          } else {
+            newRoot = rotate_left(parentNode, Z);
+          }
+        } else {
+          auto pre = m_nodes[parentNode].m_balance++;
           if (pre == 0)
             break;
 
@@ -775,7 +800,16 @@ private:
         break;
     }
 
-    // Now let's think here.
+    if (lateCleanup && node.m_parent != -1) {
+      if (m_nodes[node.m_parent].m_left == root) {
+        m_nodes[node.m_parent].m_left = -1;
+      } else {
+        m_nodes[node.m_parent].m_right = -1;
+      }
+    }
+
+    free_node(root);
+    --m_size;
     return retValue;
   }
 
@@ -856,10 +890,11 @@ private:
 
     void add_node_attrib(const std::string& sid, const std::string& key, const std::string& val, bool isHtml)
     {
+      using namespace std::string_literals;
       if (isHtml) {
-        m_nodes[sid][key] = "<" + val + ">";
+        m_nodes[sid][key] = "<"s + val + ">"s;
       } else {
-        m_nodes[sid][key] = "\"" + val + "\"";
+        m_nodes[sid][key] = "\""s + val + "\""s;
       }
     }
 

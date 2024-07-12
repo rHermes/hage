@@ -182,13 +182,15 @@ TEST_CASE("AVL erase tests")
 
   SUBCASE("Erasing randomly should work")
   {
-    std::ranlux48 rng{ 24 };
+    std::ranlux48 rng{ 123 };
     std::ranges::shuffle(toDelete, rng);
     for (auto toDel : toDelete) {
       INFO("Doing: ", toDel);
 
+      /*
       std::cout << "Going to delete: " << toDel << "\n";
       std::cout << tree.print_dot_tree();
+       */
 
       auto it1 = tree.find(toDel);
       REQUIRE_NE(it1, tree.end());
