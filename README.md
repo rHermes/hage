@@ -64,11 +64,14 @@ Planned datastructures:
 
 #### AVLTree
 
+![An AVL tree, showing red for left heavy, and green for right heavy nodes](assets/avl-tree.png)
+
 An AVLTree implementation, currently in the process of being completed. Features are:
 
 - Full iterator support
 - Node pooling
 - Supports most of the same functionality as `std::map`
+- Graphviz output for debugging purposes.
 
 
 #### TODO

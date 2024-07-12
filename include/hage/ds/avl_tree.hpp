@@ -139,6 +139,9 @@ public:
     return out.str();
   }
 
+  /// Returns a DOT diagram that can be used to debug the tree. Remember to use the cairo renderer when rendering,
+  /// to get support for the raised attributes, so the IDs are easier to distinguish.
+  /// \return A DOT diagram of the AVL tree.
   [[nodiscard]] std::string print_dot_tree() const
   {
     DotPrinter printer;
@@ -584,7 +587,7 @@ private:
   [[nodiscard]] constexpr node_id_type next_node(node_id_type cur) const
   {
     if (cur == m_end) {
-      throw std::runtime_error("Invalid iterator usage, trying to increment beyond end");
+      throw std::runtime_error("Invalid  usage, trying to increment beyond end");
     }
 
     if (cur == m_nodes[m_end].m_parent) {
@@ -640,12 +643,22 @@ private:
 
   [[nodiscard]] constexpr node_id_type internal_erase(const node_id_type root)
   {
+    // We handle the 1 node tree specifically.
+    if (m_size == 1) {
+      m_begin = -1;
+      m_nodes[m_end].m_parent = -1;
+      m_size = 0;
+      m_root = -1;
+      free_node(root);
+
+      return m_end;
+    }
 
     const auto retValue = next_node(root);
 
     // If we are going to delete the end root, we need to update.
     if (root == m_nodes[m_end].m_parent)
-      m_nodes[m_end].m_parent = m_nodes[root].m_parent;
+      m_nodes[m_end].m_parent = prev_node(root);
 
     if (root == m_begin) {
       m_begin = retValue;
@@ -716,16 +729,27 @@ private:
       }
 
       if (node.m_right != next) {
+        if (nextNode.m_right != -1) {
+          newRoot = nextNode.m_right;
+          m_nodes[nextNode.m_right].m_parent = nextNode.m_parent;
+
+          if (m_nodes[nextNode.m_parent].m_left == next) {
+            m_nodes[nextNode.m_parent].m_left = nextNode.m_right;
+          } else {
+            m_nodes[nextNode.m_parent].m_right = nextNode.m_right;
+          }
+        } else {
+          if (m_nodes[nextNode.m_parent].m_left == next) {
+            m_nodes[nextNode.m_parent].m_left = -1;
+          } else {
+            m_nodes[nextNode.m_parent].m_right = -1;
+          }
+        }
+
         nextNode.m_right = std::exchange(node.m_right, -1);
         m_nodes[nextNode.m_right].m_parent = next;
 
-        if (m_nodes[nextNode.m_parent].m_left == next) {
-          m_nodes[nextNode.m_parent].m_left = -1;
-        } else {
-          m_nodes[nextNode.m_parent].m_right = -1;
-        }
         nextNode.m_parent = std::exchange(node.m_parent, nextNode.m_parent);
-
       } else {
         firstNudge = 1;
         nextNode.m_parent = std::exchange(node.m_parent, next);

@@ -158,13 +158,113 @@ TEST_CASE("AVL Tree iterator tests")
   }
 }
 
-TEST_CASE("AVL erase tests")
+TEST_CASE("AVL erasure specific tests")
+{
+  // These are handcrafted trees to test for common mistake I've found during debugging.
+  ds::AVLTree<int, int> tree;
+  std::map<int, int> mirror;
+
+  const auto emplace = [&](const int key, const int val) {
+    auto [it1, inserted1] = tree.try_emplace(key, val);
+    auto [it2, inserted2] = mirror.try_emplace(key, val);
+    REQUIRE_EQ(inserted1, inserted2);
+
+    if (inserted1) {
+      REQUIRE_EQ(it1->key(), it2->first);
+      REQUIRE_EQ(it1->value(), it2->second);
+    }
+
+    return std::make_pair(it1, inserted1);
+  };
+
+  const auto erase = [&](const int key) {
+    auto findIt1 = tree.find(key);
+    auto findIt2 = mirror.find(key);
+    auto it1 = tree.erase(findIt1);
+    auto it2 = mirror.erase(findIt2);
+
+    if (it2 == mirror.end()) {
+      REQUIRE_UNARY(it1 == tree.end());
+    } else {
+      REQUIRE_UNARY_FALSE(it1 == tree.end());
+      REQUIRE_EQ(it1->key(), it2->first);
+      REQUIRE_EQ(it1->value(), it2->second);
+    }
+
+    return it1;
+  };
+
+  SUBCASE("Root with only left leaf")
+  {
+    emplace(10, 1);
+    emplace(7, 2);
+
+    SUBCASE("Deleting root")
+    {
+      auto it = erase(10);
+      REQUIRE_EQ(it, tree.end());
+    }
+
+    SUBCASE("Deleting leaf")
+    {
+      auto it = erase(7);
+      REQUIRE_EQ(it->key(), 10);
+    }
+
+    SUBCASE("Root then leaf")
+    {
+      auto it = erase(10);
+      REQUIRE_EQ(it, tree.end());
+
+      auto it2 = erase(7);
+      REQUIRE_EQ(it2, tree.end());
+    }
+  }
+
+  SUBCASE("Delete root with next has right child but not left")
+  {
+    emplace(15, 1);
+    emplace(10, 2);
+    emplace(32, 3);
+    emplace(11, 4);
+    emplace(24, 5);
+    emplace(39, 6);
+    emplace(34, 12);
+    emplace(7, 7);
+    emplace(13, 8);
+    emplace(19, 9);
+    emplace(25, 10);
+    emplace(21, 11);
+
+    erase(15);
+
+    auto it = tree.find(21);
+    REQUIRE_NE(it, tree.end());
+  }
+
+  SUBCASE("Delete direct right child, with right child")
+  {
+    emplace(15, 1);
+    emplace(10, 2);
+    emplace(32, 3);
+    emplace(16, 4);
+    emplace(35, 5);
+    emplace(11, 6);
+    emplace(39, 7);
+
+    erase(32);
+
+    auto it = tree.find(39);
+    REQUIRE_NE(it, tree.end());
+  }
+}
+
+TEST_CASE("AVL erasure grind tests")
 {
   ds::AVLTree<int, int> tree;
   std::map<int, int> mirror;
 
-  constexpr int N = 20;
-  // We have to insert a 100 elements.
+  constexpr int N = 100000;
   for (int i = 0; i < N; i++) {
     auto [it, inserted] = tree.try_emplace(i, N - i);
     REQUIRE_UNARY(inserted);
